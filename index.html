@@ -150,10 +150,9 @@
     <div id="crystals"></div>
   </div>
 
-  <!-- Завантажуємо скрипти глобально -->
+  <!-- Використовуємо правильні CDN посилання -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.10/dist/mindar-target.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.10/dist/mindar-target-three.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.10/dist/mindar-image-three.prod.js"></script>
 
   <script>
     // Translations for internationalization
@@ -165,7 +164,8 @@
         etsyBtn: "Shop on Etsy",
         loading: "Loading...",
         scanning: "Scanning for marker...",
-        errorCamera: "❌ Please allow camera access or refresh the page."
+        errorCamera: "❌ Please allow camera access or refresh the page.",
+        errorLibrary: "❌ AR library failed to load. Please refresh."
       },
       uk: {
         infoScan: "Наведи камеру на будь-який маркер календаря ❤️",
@@ -174,7 +174,8 @@
         etsyBtn: "Купити на Etsy",
         loading: "Завантажуємо...",
         scanning: "Шукаємо маркер...",
-        errorCamera: "❌ Дозволь доступ до камери або онови сторінку."
+        errorCamera: "❌ Дозволь доступ до камери або онови сторінку.",
+        errorLibrary: "❌ Помилка завантаження AR. Оновіть сторінку."
       }
     };
 
@@ -215,9 +216,11 @@
     let loadedImagesCount = 0;
     for (let i = 1; i <= 12; i++) {
       const img = new Image();
+      // Використовуємо fallback URL для тестування
       img.src = `images/${i.toString().padStart(2, '0')}.jpg`;
       img.onload = () => {
         loadedImagesCount++;
+        console.log(`Image ${i} loaded successfully`);
         if (loadedImagesCount === totalMonths) {
           allImagesLoaded = true;
           console.log('All images loaded successfully');
@@ -226,428 +229,273 @@
       img.onerror = () => {
         console.error(`Failed to load image: images/${i.toString().padStart(2, '0')}.jpg`);
         loadedImagesCount++;
+        // Навіть якщо зображення не завантажилось, продовжуємо
+        if (loadedImagesCount === totalMonths) {
+          allImagesLoaded = true;
+        }
       };
       images.push(img);
     }
 
-    // Wait for DOM and scripts to load
-    document.addEventListener('DOMContentLoaded', function() {
-      // Check if MindARThree is available
-      if (typeof MindARThree === 'undefined') {
-        console.error('MindARThree is not defined. Check script loading order.');
-        document.getElementById('info').innerHTML = '❌ Error loading AR library';
+    // Wait for everything to load
+    window.addEventListener('load', function() {
+      const loadingEl = document.getElementById('loading');
+      
+      // Check if required libraries are available
+      if (typeof THREE === 'undefined') {
+        loadingEl.style.display = 'none';
+        document.getElementById('info').innerHTML = translations[currentLang].errorLibrary;
+        console.error('THREE.js is not defined');
         return;
       }
 
-      // MindAR setup
-      const mindarThree = new MindARThree({
-        container: document.getElementById('mindar-container'),
-        imageTargetSrc: 'calendar.mind',
-        maxTrack: 12,
-        uiScanning: translations[currentLang].scanning || "Scanning for marker...",
-        uiLoading: translations[currentLang].loading || "Loading...",
-        filterMinCF: 0.0001,
-        filterBeta: 0.0001
-      });
-
-      const { renderer, scene, camera } = mindarThree;
-      renderer.setPixelRatio(DPR);
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-      // Lighting setup
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
-      directionalLight.position.set(0, 1, 1);
-      directionalLight.castShadow = true;
-      scene.add(directionalLight);
-      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-
-      // AR groups for each target
-      const arGroups = [];
-      for (let i = 0; i < 12; i++) {
-        const group = new THREE.Group();
-        const targetGroup = mindarThree.addAnchor(i);
-        targetGroup.group.add(group);
-        arGroups.push(group);
-      }
-
-      // Resize handler
-      function onWindowResize() {
-        const w = window.innerWidth, h = window.innerHeight;
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
-      }
-      window.addEventListener('resize', onWindowResize, { passive: true });
-      window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 300));
-
-      // Unified touch/mouse handler
-      const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-      let dragging = false;
-      
-      function addUnifiedTouch(el, onStart, onMove = () => {}, onEnd = () => {}) {
-        const startHandler = (e) => {
-          e.preventDefault();
-          dragging = true;
-          const touch = isMobile ? e.touches[0] : e;
-          onStart(touch);
-        };
-        const moveHandler = (e) => {
-          if (!dragging) return;
-          e.preventDefault();
-          const touch = isMobile ? e.touches[0] : e;
-          onMove(touch);
-        };
-        const endHandler = (e) => {
-          e.preventDefault();
-          dragging = false;
-          onEnd();
-        };
-
-        if (isMobile) {
-          el.addEventListener('touchstart', startHandler, { passive: false });
-          el.addEventListener('touchmove', moveHandler, { passive: false });
-          el.addEventListener('touchend', endHandler, { passive: false });
-          el.addEventListener('touchcancel', endHandler, { passive: false });
-        } else {
-          el.addEventListener('mousedown', startHandler);
-          el.addEventListener('mousemove', moveHandler);
-          el.addEventListener('mouseup', endHandler);
-          el.addEventListener('mouseleave', endHandler);
-        }
-      }
-
-      // Haptic feedback for mobile
-      function hapticFeedback(pattern = [100]) {
-        if (isMobile && navigator.vibrate) {
-          navigator.vibrate(pattern);
-        }
-      }
-
-      // Start AR
-      const loadingEl = document.getElementById('loading');
-      loadingEl.style.display = 'block';
-      
-      mindarThree.start().then(() => {
+      if (typeof MindARThree === 'undefined') {
         loadingEl.style.display = 'none';
-        let lastVisible = -1;
-        const clock = new THREE.Clock();
+        document.getElementById('info').innerHTML = translations[currentLang].errorLibrary;
+        console.error('MindARThree is not defined. Available globals:', Object.keys(window));
+        return;
+      }
 
-        const animate = () => {
-          const delta = clock.getDelta();
-          renderer.render(scene, camera);
-          
-          let currentVisible = -1;
-          for (let i = 0; i < 12; i++) {
-            if (mindarThree.anchors[i] && mindarThree.anchors[i].visible) {
-              currentVisible = i;
-              break;
-            }
-          }
-          
-          if (currentVisible !== lastVisible) {
-            if (lastVisible !== -1) arGroups[lastVisible].clear();
-            if (currentVisible !== -1 && allImagesLoaded) {
-              setTimeout(() => showMonthContent(currentVisible, arGroups[currentVisible]), 300);
-            }
-            lastVisible = currentVisible;
-          }
-          requestAnimationFrame(animate);
-        };
-        animate();
-      }).catch(e => {
-        loadingEl.style.display = 'none';
-        document.getElementById('info').innerHTML = translations[currentLang].errorCamera;
-        console.error('AR Error:', e);
-      });
-
-      // Main mechanics
-      function showMonthContent(month, arGroup) {
-        if (collectedCrystals.includes(month)) {
-          showCrystalReward(month, arGroup);
-          return;
-        }
-        
-        const img = images[month];
-        if (!img.complete) {
-          img.onload = () => showMonthContent(month, arGroup);
-          return;
-        }
-        
-        arGroup.clear();
-        const texture = new THREE.Texture(img);
-        texture.needsUpdate = true;
-        const aspect = img.width / img.height;
-        const size = Math.min(1.8, window.innerWidth / 800 * 1.8);
-        const geo = new THREE.PlaneGeometry(size, size / aspect);
-        
-        const frostMaterial = new THREE.ShaderMaterial({
-          uniforms: { 
-            time: { value: 0 }, 
-            melt: { value: 0 }, 
-            tex: { value: texture } 
-          },
-          vertexShader: `
-            varying vec2 vUv; 
-            void main() { 
-              vUv = uv; 
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); 
-            }
-          `,
-          fragmentShader: `
-            uniform float time; 
-            uniform float melt; 
-            uniform sampler2D tex;
-            varying vec2 vUv;
-            float noise(vec2 p) { 
-              return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); 
-            }
-            void main() {
-              float n = noise(vUv * 12.0 + time * 0.1);
-              float ice = smoothstep(0.45, 0.55, n) * (1.0 - melt);
-              vec3 col = mix(texture2D(tex, vUv).rgb, vec3(0.9, 0.95, 1.0), ice * 0.7);
-              gl_FragColor = vec4(col, 1.0 - melt * 0.5);
-            }
-          `,
-          transparent: true
+      console.log('All libraries loaded successfully');
+      
+      // Initialize MindAR
+      try {
+        const mindarThree = new MindARThree({
+          container: document.getElementById("mindar-container"),
+          imageTargetSrc: "calendar.mind",
+          maxTrack: 1, // Спочатку спробуємо з одним маркером
+          uiScanning: translations[currentLang].scanning,
+          uiLoading: translations[currentLang].loading,
         });
+
+        const { renderer, scene, camera } = mindarThree;
+        renderer.setPixelRatio(DPR);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // Lighting setup
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
+        directionalLight.position.set(0, 1, 1);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+
+        // AR groups for targets
+        const arGroups = [];
+        for (let i = 0; i < 12; i++) {
+          const group = new THREE.Group();
+          const anchor = mindarThree.addAnchor(i);
+          anchor.group.add(group);
+          arGroups.push(group);
+        }
+
+        // Resize handler
+        function onWindowResize() {
+          const w = window.innerWidth, h = window.innerHeight;
+          camera.aspect = w / h;
+          camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+        }
+        window.addEventListener('resize', onWindowResize, { passive: true });
+        window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 300));
+
+        // Unified touch/mouse handler
+        const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+        let dragging = false;
         
-        const frost = new THREE.Mesh(geo, frostMaterial);
-        frost.position.z = 0.01;
-        arGroup.add(frost);
+        function addUnifiedTouch(el, onStart, onMove = () => {}, onEnd = () => {}) {
+          const startHandler = (e) => {
+            e.preventDefault();
+            dragging = true;
+            const touch = isMobile ? e.touches[0] : e;
+            onStart(touch);
+          };
+          const moveHandler = (e) => {
+            if (!dragging) return;
+            e.preventDefault();
+            const touch = isMobile ? e.touches[0] : e;
+            onMove(touch);
+          };
+          const endHandler = (e) => {
+            e.preventDefault();
+            dragging = false;
+            onEnd();
+          };
 
-        // Animate melting on touch
-        let meltInterval;
-        const startMelting = () => {
-          hapticFeedback([50]);
-          if (meltInterval) clearInterval(meltInterval);
-          meltInterval = setInterval(() => {
-            frostMaterial.uniforms.melt.value += 0.03;
-            if (frostMaterial.uniforms.melt.value >= 1) {
-              clearInterval(meltInterval);
-              showPuzzle(month, texture, arGroup, size, size / aspect);
-            }
-          }, 40);
-        };
-
-        addUnifiedTouch(renderer.domElement, startMelting);
-
-        // Animate frost shimmer
-        const animateFrost = () => {
-          if (arGroup.children.includes(frost)) {
-            frostMaterial.uniforms.time.value += 0.05;
-            requestAnimationFrame(animateFrost);
-          }
-        };
-        animateFrost();
-      }
-
-      function showPuzzle(month, baseTexture, arGroup, width, height) {
-        arGroup.clear();
-        const pieces = [];
-        const grid = 3;
-        const sizeW = width / grid;
-        const sizeH = height / grid;
-
-        for (let y = 0; y < grid; y++) {
-          for (let x = 0; x < grid; x++) {
-            const canvas = document.createElement('canvas');
-            canvas.width = canvas.height = 512;
-            const ctx = canvas.getContext('2d');
-            ctx.imageSmoothingEnabled = true;
-            ctx.drawImage(
-              baseTexture.image,
-              x * baseTexture.image.width / grid, 
-              y * baseTexture.image.height / grid,
-              baseTexture.image.width / grid, 
-              baseTexture.image.height / grid,
-              0, 0, 512, 512
-            );
-            
-            const tex = new THREE.CanvasTexture(canvas);
-            tex.needsUpdate = true;
-            const mesh = new THREE.Mesh(
-              new THREE.PlaneGeometry(sizeW * 0.95, sizeH * 0.95),
-              new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.85 })
-            );
-            
-            const posX = (x - grid / 2 + 0.5) * sizeW + (Math.random() - 0.5) * sizeW * 1.5;
-            const posY = (grid / 2 - y - 0.5) * sizeH + (Math.random() - 0.5) * sizeH * 1.5;
-            mesh.position.set(posX, posY, 0.02);
-            mesh.userData = { 
-              correctX: (x - grid / 2 + 0.5) * sizeW, 
-              correctY: (grid / 2 - y - 0.5) * sizeH,
-              originalX: posX,
-              originalY: posY
-            };
-            arGroup.add(mesh);
-            pieces.push(mesh);
+          if (isMobile) {
+            el.addEventListener('touchstart', startHandler, { passive: false });
+            el.addEventListener('touchmove', moveHandler, { passive: false });
+            el.addEventListener('touchend', endHandler, { passive: false });
+            el.addEventListener('touchcancel', endHandler, { passive: false });
+          } else {
+            el.addEventListener('mousedown', startHandler);
+            el.addEventListener('mousemove', moveHandler);
+            el.addEventListener('mouseup', endHandler);
+            el.addEventListener('mouseleave', endHandler);
           }
         }
 
-        let selectedPiece = null;
-        const raycaster = new THREE.Raycaster();
-
-        const onTouchStart = (touch) => {
-          const rect = renderer.domElement.getBoundingClientRect();
-          const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
-          const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
-          raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-          const intersects = raycaster.intersectObjects(pieces);
-          if (intersects.length > 0) {
-            selectedPiece = intersects[0].object;
-            hapticFeedback([30]);
-            selectedPiece.userData.startPos = selectedPiece.position.clone();
+        // Haptic feedback for mobile
+        function hapticFeedback(pattern = [100]) {
+          if (isMobile && navigator.vibrate) {
+            navigator.vibrate(pattern);
           }
-        };
+        }
 
-        const onTouchMove = (touch) => {
-          if (!selectedPiece) return;
-          const rect = renderer.domElement.getBoundingClientRect();
-          const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
-          const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
-          const v = new THREE.Vector3(x, y, 0.5).unproject(camera);
-          selectedPiece.position.x = v.x;
-          selectedPiece.position.y = v.y;
-        };
+        // Start AR
+        loadingEl.style.display = 'block';
+        
+        mindarThree.start().then(() => {
+          loadingEl.style.display = 'none';
+          let lastVisible = -1;
+          const clock = new THREE.Clock();
 
-        const onTouchEnd = () => {
-          if (!selectedPiece) return;
-          const { correctX, correctY } = selectedPiece.userData;
-          const dist = Math.hypot(
-            selectedPiece.position.x - correctX, 
-            selectedPiece.position.y - correctY
-          );
-          const tolerance = Math.max(sizeW, sizeH) * 0.4;
-          
-          if (dist < tolerance) {
-            selectedPiece.position.set(correctX, correctY, 0.02);
-            selectedPiece.material.opacity = 1;
-            hapticFeedback([100, 50]);
-            const index = pieces.indexOf(selectedPiece);
-            if (index > -1) pieces.splice(index, 1);
-            if (pieces.length === 0) {
-              setTimeout(() => showCrystalReward(month, arGroup), 500);
-            }
-          } else {
-            const { originalX, originalY } = selectedPiece.userData;
-            let f = 0;
-            const animBack = () => {
-              f += 0.1;
-              if (f <= 1) {
-                const ease = 1 - Math.pow(1 - f, 3);
-                selectedPiece.position.x = selectedPiece.userData.startPos.x + (originalX - selectedPiece.userData.startPos.x) * ease;
-                selectedPiece.position.y = selectedPiece.userData.startPos.y + (originalY - selectedPiece.userData.startPos.y) * ease;
-                requestAnimationFrame(animBack);
+          const animate = () => {
+            const delta = clock.getDelta();
+            renderer.render(scene, camera);
+            
+            let currentVisible = -1;
+            for (let i = 0; i < 12; i++) {
+              if (mindarThree.anchors[i] && mindarThree.anchors[i].visible) {
+                currentVisible = i;
+                break;
               }
-            };
-            animBack();
-          }
-          selectedPiece = null;
-        };
-
-        addUnifiedTouch(renderer.domElement, onTouchStart, onTouchMove, onTouchEnd);
-      }
-
-      function showCrystalReward(month, arGroup) {
-        if (collectedCrystals.includes(month)) return;
-        collectedCrystals.push(month);
-        localStorage.setItem('ua-crystals2026', JSON.stringify(collectedCrystals));
-        updateCrystalsUI();
-        arGroup.clear();
-
-        const colors = ['#00ffff', '#ff00ff', '#00ff00', '#ffff00', '#ff8800', '#ff0066', '#0066ff', '#ff3399', '#33ff99', '#ffcc00', '#cc00ff', '#00ccff'];
-        const crystalGeo = new THREE.IcosahedronGeometry(0.35, 1);
-        const crystalMat = new THREE.MeshStandardMaterial({
-          color: colors[month],
-          emissive: colors[month],
-          emissiveIntensity: 4,
-          roughness: 0,
-          metalness: 0.85
-        });
-        const crystal = new THREE.Mesh(crystalGeo, crystalMat);
-        crystal.position.z = 0.2;
-        crystal.castShadow = true;
-        arGroup.add(crystal);
-
-        const animateCrystal = () => {
-          if (!arGroup.parent) return;
-          crystal.rotation.y += 0.015;
-          crystal.rotation.x += 0.005;
-          const scale = 1 + Math.sin(Date.now() * 0.004) * 0.08;
-          crystal.scale.setScalar(scale);
-          requestAnimationFrame(animateCrystal);
-        };
-        animateCrystal();
-        hapticFeedback([200]);
-
-        if (collectedCrystals.length === 12) {
-          setTimeout(() => {
-            arGroup.clear();
-            const heart = new THREE.Group();
-            const geo = new THREE.BufferGeometry();
-            const vertices = [];
-            const heartColor = Math.random() > 0.5 ? 0x0057b7 : 0xffd700;
-            
-            for (let i = 0; i < 2500; i++) {
-              const a = Math.random() * Math.PI * 2;
-              const r = Math.random() * 1.2;
-              const heartX = Math.cos(a) * r * (Math.sin(a) * Math.abs(Math.sin(a)) + 1);
-              const heartY = -Math.abs(Math.sin(a)) * r;
-              vertices.push(
-                heartX * 0.8, 
-                heartY * 0.8 + (Math.random() - 0.5) * 0.3, 
-                (Math.random() - 0.5) * 0.3
-              );
             }
             
-            geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-            const pointsMaterial = new THREE.PointsMaterial({
-              color: heartColor,
-              size: window.innerWidth > 600 ? 0.05 : 0.03,
-              transparent: true,
-              opacity: 0.95,
-              blending: THREE.AdditiveBlending
-            });
-            
-            const pts = new THREE.Points(geo, pointsMaterial);
-            heart.add(pts);
-            arGroup.add(heart);
+            if (currentVisible !== lastVisible) {
+              if (lastVisible !== -1) arGroups[lastVisible].clear();
+              if (currentVisible !== -1 && allImagesLoaded) {
+                setTimeout(() => showMonthContent(currentVisible, arGroups[currentVisible]), 300);
+              }
+              lastVisible = currentVisible;
+            }
+            requestAnimationFrame(animate);
+          };
+          animate();
+        }).catch(e => {
+          loadingEl.style.display = 'none';
+          document.getElementById('info').innerHTML = translations[currentLang].errorCamera;
+          console.error('AR Error:', e);
+        });
 
-            const animateHeart = () => {
-              if (!arGroup.parent) return;
-              pts.rotation.y += 0.005;
-              pts.material.opacity = 0.95 + Math.sin(Date.now() * 0.003) * 0.05;
-              requestAnimationFrame(animateHeart);
-            };
-            animateHeart();
-
-            document.getElementById('info').innerHTML = translations[currentLang].infoComplete;
-            hapticFeedback([300, 100, 300]);
-          }, 2000);
-        }
-      }
-
-      function updateCrystalsUI() {
-        const container = document.getElementById('crystals');
-        container.innerHTML = '';
-        for (let i = 0; i < totalMonths; i++) {
-          const div = document.createElement('div');
-          div.className = 'crystal-slot';
-          if (collectedCrystals.includes(i)) {
-            div.innerHTML = '✦';
-            div.classList.add('collected');
-          } else {
-            div.innerHTML = (i + 1);
+        // Main mechanics
+        function showMonthContent(month, arGroup) {
+          if (collectedCrystals.includes(month)) {
+            showCrystalReward(month, arGroup);
+            return;
           }
-          container.appendChild(div);
+          
+          const img = images[month];
+          
+          arGroup.clear();
+          
+          // Створюємо просту геометрію для тесту
+          const geometry = new THREE.PlaneGeometry(1, 1);
+          const material = new THREE.MeshBasicMaterial({ 
+            color: 0x00ffff,
+            transparent: true,
+            opacity: 0.8
+          });
+          const mesh = new THREE.Mesh(geometry, material);
+          arGroup.add(mesh);
+
+          // Додаємо текст з номером місяця
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.width = 256;
+          canvas.height = 256;
+          context.fillStyle = '#00ffff';
+          context.font = 'bold 100px Arial';
+          context.textAlign = 'center';
+          context.textBaseline = 'middle';
+          context.fillText((month + 1).toString(), 128, 128);
+          
+          const texture = new THREE.CanvasTexture(canvas);
+          const textMaterial = new THREE.MeshBasicMaterial({ 
+            map: texture,
+            transparent: true
+          });
+          const textMesh = new THREE.Mesh(geometry, textMaterial);
+          textMesh.position.z = 0.01;
+          arGroup.add(textMesh);
+
+          const startInteraction = () => {
+            hapticFeedback([50]);
+            arGroup.clear();
+            showCrystalReward(month, arGroup);
+          };
+
+          addUnifiedTouch(renderer.domElement, startInteraction);
         }
+
+        function showCrystalReward(month, arGroup) {
+          if (collectedCrystals.includes(month)) return;
+          collectedCrystals.push(month);
+          localStorage.setItem('ua-crystals2026', JSON.stringify(collectedCrystals));
+          updateCrystalsUI();
+          arGroup.clear();
+
+          const colors = ['#00ffff', '#ff00ff', '#00ff00', '#ffff00', '#ff8800', '#ff0066', '#0066ff', '#ff3399', '#33ff99', '#ffcc00', '#cc00ff', '#00ccff'];
+          const crystalGeo = new THREE.IcosahedronGeometry(0.35, 1);
+          const crystalMat = new THREE.MeshStandardMaterial({
+            color: colors[month],
+            emissive: colors[month],
+            emissiveIntensity: 4,
+            roughness: 0,
+            metalness: 0.85
+          });
+          const crystal = new THREE.Mesh(crystalGeo, crystalMat);
+          crystal.position.z = 0.2;
+          crystal.castShadow = true;
+          arGroup.add(crystal);
+
+          const animateCrystal = () => {
+            if (!arGroup.parent) return;
+            crystal.rotation.y += 0.015;
+            crystal.rotation.x += 0.005;
+            const scale = 1 + Math.sin(Date.now() * 0.004) * 0.08;
+            crystal.scale.setScalar(scale);
+            requestAnimationFrame(animateCrystal);
+          };
+          animateCrystal();
+          hapticFeedback([200]);
+
+          if (collectedCrystals.length === 12) {
+            setTimeout(() => {
+              arGroup.clear();
+              document.getElementById('info').innerHTML = translations[currentLang].infoComplete;
+              hapticFeedback([300, 100, 300]);
+            }, 2000);
+          }
+        }
+
+      } catch (error) {
+        loadingEl.style.display = 'none';
+        document.getElementById('info').innerHTML = translations[currentLang].errorLibrary;
+        console.error('Initialization error:', error);
       }
 
-      // Initial UI update
-      updateCrystalsUI();
     });
+
+    function updateCrystalsUI() {
+      const container = document.getElementById('crystals');
+      container.innerHTML = '';
+      for (let i = 0; i < totalMonths; i++) {
+        const div = document.createElement('div');
+        div.className = 'crystal-slot';
+        if (collectedCrystals.includes(i)) {
+          div.innerHTML = '✦';
+          div.classList.add('collected');
+        } else {
+          div.innerHTML = (i + 1);
+        }
+        container.appendChild(div);
+      }
+    }
+
+    // Initial UI update
+    updateCrystalsUI();
   </script>
 </body>
 </html>
