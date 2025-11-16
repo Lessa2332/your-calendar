@@ -140,6 +140,9 @@
       max-width: 90%;
       z-index: 102;
       display: none;
+      background: rgba(0,0,0,0.8);
+      border-radius: 15px;
+      border: 2px solid #00ffff;
     }
     #error-fallback h3 {
       color: #00ffff;
@@ -204,23 +207,9 @@
   <!-- Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
-  <!-- MindAR -->
-  <script>
-    function loadMindAR() {
-      return new Promise((resolve, reject) => {
-        if (typeof MindARThree !== 'undefined') {
-          resolve();
-          return;
-        }
-
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-three.prod.js';
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Failed to load MindAR'));
-        document.head.appendChild(script);
-      });
-    }
-  </script>
+  <!-- MindAR - використовуємо правильні UMD версії -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-three.prod.js"></script>
 
   <script>
     // Constants and versioning
@@ -231,13 +220,6 @@
     const monthNames = {
       en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
       uk: ['Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень']
-    };
-
-    // Cached geometries and materials for performance
-    const CACHED_GEOMETRIES = {
-      cube: new THREE.BoxGeometry(0.3, 0.3, 0.3),
-      crystal: new THREE.OctahedronGeometry(0.3, 0),
-      plane: new THREE.PlaneGeometry(0.4, 0.4)
     };
 
     // Main application
@@ -285,20 +267,17 @@
         this.setupEventListeners();
         this.updateCrystalsUI();
         
-        try {
-          await loadMindAR();
-          
+        // Check if libraries are available
+        setTimeout(() => {
           if (typeof MindARThree === 'undefined') {
-            throw new Error('MindARThree not available');
+            this.showError('❌ AR library failed to load. Please refresh the page.');
+            console.error('MindARThree not available. Available globals:', Object.keys(window));
+            return;
           }
 
           console.log('✅ All libraries loaded');
           this.initializeAR();
-          
-        } catch (error) {
-          this.showError('❌ AR not supported in your browser');
-          console.error('❌ Library loading failed:', error);
-        }
+        }, 1000);
       }
 
       setupEventListeners() {
@@ -321,6 +300,8 @@
             if (this.renderer) {
               const container = document.getElementById('mindar-container');
               this.renderer.setSize(container.clientWidth, container.clientHeight);
+              this.camera.aspect = container.clientWidth / container.clientHeight;
+              this.camera.updateProjectionMatrix();
             }
           }, 300);
         });
@@ -414,7 +395,8 @@
         loadingEl.style.display = 'block';
 
         try {
-          this.mindarThree = new MindARThree({
+          // Використовуємо правильний API для MindAR
+          const mindarThree = new MindARThree.Target({
             container: document.getElementById("mindar-container"),
             imageTargetSrc: "calendar.mind",
             maxTrack: 1,
@@ -422,10 +404,11 @@
             uiLoading: "Loading AR..."
           });
 
-          const { renderer, scene, camera } = this.mindarThree;
+          const { renderer, scene, camera } = mindarThree;
           this.renderer = renderer;
           this.scene = scene;
           this.camera = camera;
+          this.mindarThree = mindarThree;
           
           // Lighting
           const light = new THREE.DirectionalLight(0xffffff, 1);
@@ -438,7 +421,7 @@
           for (let i = 0; i < totalMonths; i++) {
             try {
               const group = new THREE.Group();
-              const anchor = this.mindarThree.addAnchor(i);
+              const anchor = mindarThree.addAnchor(i);
               if (!anchor) {
                 console.warn(`⚠️ No anchor for month ${i}`);
                 continue;
@@ -470,7 +453,7 @@
           renderer.domElement.addEventListener('touchstart', this.handleGlobalTouch, { passive: false });
 
           // Start AR
-          this.mindarThree.start().then(() => {
+          mindarThree.start().then(() => {
             console.log('✅ AR started successfully');
             loadingEl.style.display = 'none';
             this.startAnimation();
@@ -598,13 +581,14 @@
         const colors = [0xff6b6b, 0x4ecdc4, 0x45b7d1, 0x96ceb4, 0xfeca57, 0xff9ff3, 
                        0x54a0ff, 0x5f27cd, 0x00d2d3, 0xff9f43, 0x10ac84, 0xee5a24];
         
+        const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
         const material = new THREE.MeshBasicMaterial({ 
           color: colors[month % colors.length],
           transparent: true,
           opacity: 0.8
         });
         
-        const cube = new THREE.Mesh(CACHED_GEOMETRIES.cube, material);
+        const cube = new THREE.Mesh(geometry, material);
         arGroup.add(cube);
 
         // Add month name
@@ -623,7 +607,7 @@
           map: texture,
           transparent: true
         });
-        const textPlane = new THREE.Mesh(CACHED_GEOMETRIES.plane, textMaterial);
+        const textPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), textMaterial);
         textPlane.position.z = 0.2;
         arGroup.add(textPlane);
       }
@@ -639,13 +623,14 @@
         arGroup.clear();
 
         // Create crystal
+        const geometry = new THREE.OctahedronGeometry(0.3, 0);
         const material = new THREE.MeshBasicMaterial({
           color: 0x00ffff,
           transparent: true,
           opacity: 0.9
         });
         
-        const crystal = new THREE.Mesh(CACHED_GEOMETRIES.crystal, material);
+        const crystal = new THREE.Mesh(geometry, material);
         arGroup.add(crystal);
         this.activeCrystals.set(month, crystal);
 
@@ -712,7 +697,7 @@
       }
 
       cleanup() {
-        if (this.renderer) {
+        if (this.renderer && this.handleGlobalTouch) {
           this.renderer.domElement.removeEventListener('click', this.handleGlobalTouch);
           this.renderer.domElement.removeEventListener('touchstart', this.handleGlobalTouch);
         }
