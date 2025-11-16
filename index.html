@@ -1,220 +1,453 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>AR Гра про Україну</title>
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@master/aframe/build/aframe-ar.js"></script>
+  <title>Magical Ukraine Calendar 2026</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      margin: 0;
-      padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-      touch-action: none; /* блокує pinch zoom */
-      font-family: Arial, sans-serif;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      touch-action: none;
     }
-    a-scene {
-      width: 100%;
-      height: 100%;
-      position: fixed;
+    #mindar-container {
+      position: absolute;
       top: 0;
       left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
     }
-    #scanText {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: #FFD700;
-      font-size: 2em;
-      font-weight: bold;
-      text-shadow: 2px 2px 6px #000;
-      z-index: 10;
+    #ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) 
+                env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    #info {
       text-align: center;
-      width: 90%;
-    }
-    #smartLessaBtn {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #ff0044;
       color: white;
-      padding: 14px 24px;
-      border-radius: 30px;
-      font-size: 1.1em;
-      font-weight: bold;
-      text-decoration: none;
-      z-index: 10;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      text-shadow: 0 0 10px #00ffff;
+      padding: 10px 16px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 12px;
+      font-size: clamp(14px, 4vw, 18px);
+      line-height: 1.4;
+      max-width: 90%;
+      margin: 0 auto;
+      pointer-events: none;
     }
-    #smartLessaBtn:hover {
-      background: #cc0036;
+    #top-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 12px;
+      gap: 10px;
+    }
+    .lang-btn, .etsy-btn {
+      pointer-events: auto;
+      background: rgba(0, 200, 255, 0.2);
+      border: 1px solid #00ffff;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 14px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+    }
+    .lang-btn:hover, .etsy-btn:hover {
+      background: rgba(0, 200, 255, 0.4);
+    }
+    #crystals {
+      display: flex;
+      gap: clamp(8px, 3vw, 14px);
+      justify-content: center;
+      padding: 0 8px 20px;
+    }
+    .crystal-slot {
+      width: clamp(40px, 12vw, 56px);
+      height: clamp(40px, 12vw, 56px);
+      border: 2px solid #00ffff77;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(24px, 7vw, 36px);
+      color: white;
     }
   </style>
 </head>
 <body>
-  <div id="scanText">Наведи камеру на зображення Hiro маркера</div>
 
-  <a-scene embedded id="arScene" arjs="sourceType: webcam; detectionMode: mono; trackingMethod: best; facingBack: true;">
-    <a-marker id="marker" preset="hiro">
-      <!-- Контейнер для гри -->
-      <a-entity id="quiz-container" position="0 0 0" rotation="-90 0 0" scale="0.05 0.05 0.05">
-        <a-text id="question-text" value="" position="-1 2 0" width="40" align="center" color="white"></a-text>
-        <a-entity id="optionA" class="option" position="-1 1 0">
-          <a-plane width="2" height="0.5" material="color: blue; opacity: 0.7"></a-plane>
-          <a-text value="" width="35" align="left" color="white" position="-0.9 -0.2 0.01"></a-text>
-        </a-entity>
-        <a-entity id="optionB" class="option" position="-1 0.5 0">
-          <a-plane width="2" height="0.5" material="color: blue; opacity: 0.7"></a-plane>
-          <a-text value="" width="35" align="left" color="white" position="-0.9 -0.2 0.01"></a-text>
-        </a-entity>
-        <a-entity id="optionC" class="option" position="-1 0 0">
-          <a-plane width="2" height="0.5" material="color: blue; opacity: 0.7"></a-plane>
-          <a-text value="" width="35" align="left" color="white" position="-0.9 -0.2 0.01"></a-text>
-        </a-entity>
-        <a-entity id="optionD" class="option" position="-1 -0.5 0">
-          <a-plane width="2" height="0.5" material="color: blue; opacity: 0.7"></a-plane>
-          <a-text value="" width="35" align="left" color="white" position="-0.9 -0.2 0.01"></a-text>
-        </a-entity>
-        <a-entity id="result-container" visible="false">
-          <a-text id="result-text" value="" position="-1 1 0" width="40" align="center" color="yellow"></a-text>
-          <a-entity id="restart-btn" class="clickable" position="-1 0 0">
-            <a-plane width="1.5" height="0.5" material="color: green; opacity: 0.7"></a-plane>
-            <a-text value="Розпочати знову" width="20" align="center" color="white" position="-0.7 -0.2 0.01"></a-text>
-          </a-entity>
-        </a-entity>
-      </a-entity>
-    </a-marker>
-    <a-entity camera>
-      <a-cursor></a-cursor>
-    </a-entity>
-  </a-scene>
+<div id="mindar-container"></div>
+<div id="ui">
+  <div id="top-bar">
+    <button class="lang-btn" id="lang-toggle">Українська</button>
+    <button class="etsy-btn" id="etsy-link">Shop on Etsy</button>
+  </div>
+  <div id="info">Point your camera at any calendar marker ❤️</div>
+  <div id="crystals"></div>
+</div>
 
-  <a href="https://youtube.com/playlist?list=PL6UDFwT9TzFxsVdFiEBsQ9yFpcYRPOpfO&si=IyXv1SkdPyvhcW7Z"
-     id="smartLessaBtn" target="_blank">@SmartLessa</a>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.10/dist/mindar-target.prod.js"></script>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js';
+import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.10/dist/mindar-target-three.prod.js';
 
-  <script>
-    const marker = document.getElementById('marker');
-    const scanText = document.getElementById('scanText');
-    const quizContainer = document.getElementById('quiz-container');
-    const questionText = document.getElementById('question-text');
-    const optionA = document.getElementById('optionA');
-    const optionB = document.getElementById('optionB');
-    const optionC = document.getElementById('optionC');
-    const optionD = document.getElementById('optionD');
-    const resultContainer = document.getElementById('result-container');
-    const resultText = document.getElementById('result-text');
-    const restartBtn = document.getElementById('restart-btn');
+// === Мови ===
+const translations = {
+  en: {
+    infoScan: "Point your camera at any calendar marker ❤️",
+    infoComplete: "UKRAINE'S HEART IS COMPLETE!<br>You are a true hero ❤️",
+    langBtn: "Українська",
+    etsyBtn: "Shop on Etsy"
+  },
+  uk: {
+    infoScan: "Наведи камеру на будь-який маркер календаря ❤️",
+    infoComplete: "СЕРЦЕ УКРАЇНИ ЗІБРАНО!<br>Ти — справжній герой ❤️",
+    langBtn: "English",
+    etsyBtn: "Купити на Etsy"
+  }
+};
 
-    // Питання про Україну
-    const questions = [
-      {
-        question: "Яка столиця України?",
-        options: ["A) Львів", "B) Київ", "C) Одеса", "D) Харків"],
-        correct: "B"
-      },
-      {
-        question: "Який колір прапора України?",
-        options: ["A) Червоно-чорний", "B) Синьо-жовтий", "C) Біло-червоний", "D) Зелено-білий"],
-        correct: "B"
-      },
-      {
-        question: "Хто автор тексту гімну України?",
-        options: ["A) Тарас Шевченко", "B) Іван Франко", "C) Павло Чубинський", "D) Леся Українка"],
-        correct: "C"
-      },
-      {
-        question: "Яка найвища гора в Україні?",
-        options: ["A) Говерла", "B) Піп Іван", "C) Роман-Кош", "D) Петрос"],
-        correct: "A"
-      },
-      {
-        question: "Коли Україна здобула незалежність?",
-        options: ["A) 1991 рік", "B) 1918 рік", "C) 1945 рік", "D) 2004 рік"],
-        correct: "A"
+let currentLang = 'en';
+const DPR = window.devicePixelRatio || 1;
+
+// === Локалізація ===
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('calendar-lang', lang);
+  const t = translations[lang];
+  document.getElementById('info').innerHTML = t.infoScan;
+  document.getElementById('lang-toggle').textContent = t.langBtn;
+  document.getElementById('etsy-link').textContent = t.etsyBtn;
+  updateCrystalsUI(); // оновлюємо UI (номери місяців не змінюються, але для майбутнього)
+}
+
+// Ініціалізація мови
+const savedLang = localStorage.getItem('calendar-lang');
+if (savedLang === 'uk') setLang('uk');
+
+// === Події кнопок ===
+document.getElementById('lang-toggle').addEventListener('click', () => {
+  setLang(currentLang === 'en' ? 'uk' : 'en');
+});
+document.getElementById('etsy-link').addEventListener('click', () => {
+  window.open('https://smartlessa.etsy.com', '_blank');
+});
+
+// === Дані ===
+let collectedCrystals = JSON.parse(localStorage.getItem('ua-crystals2026') || '[]');
+const totalMonths = 12;
+const images = [];
+for (let i = 1; i <= 12; i++) {
+  const img = new Image();
+  img.src = `images/${i.toString().padStart(2, '0')}.jpg`;
+  images.push(img);
+}
+
+// === MindAR ===
+const mindarThree = new MindARThree({
+  container: document.getElementById('mindar-container'),
+  imageTargetSrc: 'calendar.mind',
+  maxTrack: 12,
+  uiScanningText: currentLang === 'uk' ? "Шукаємо маркер..." : "Scanning for marker...",
+  uiLoadingText: currentLang === 'uk' ? "Завантажуємо..." : "Loading...",
+  warmupTolerance: 3
+});
+
+const { renderer, scene, camera } = mindarThree;
+renderer.setPixelRatio(DPR);
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+// Світло
+scene.add(new THREE.DirectionalLight(0xffffff, 2.5));
+scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+
+// AR групи для кожного маркера
+const arGroups = [];
+for (let i = 0; i < 12; i++) {
+  const group = new THREE.Group();
+  const targetGroup = mindarThree.addTargetGroup(i, 1);
+  targetGroup.add(group);
+  arGroups.push(group);
+}
+
+// Ресайз
+function onWindowResize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', onWindowResize, { passive: true });
+window.addEventListener('orientationchange', () => setTimeout(onWindowResize, 300));
+
+// Уніфікований тач
+const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
+function addUnifiedTouch(el, onStart, onMove, onEnd) {
+  if (isMobile) {
+    el.addEventListener('touchstart', e => { e.preventDefault(); onStart(e.touches[0]); }, { passive: false });
+    el.addEventListener('touchmove', e => { e.preventDefault(); onMove(e.touches[0]); }, { passive: false });
+    el.addEventListener('touchend', e => { e.preventDefault(); onEnd(); }, { passive: false });
+  } else {
+    el.addEventListener('mousedown', e => onStart(e));
+    el.addEventListener('mousemove', e => { if (el.dragging) onMove(e); });
+    el.addEventListener('mouseup', onEnd);
+    el.addEventListener('mouseleave', onEnd);
+  }
+}
+
+// === Запуск AR ===
+mindarThree.start().then(() => {
+  let lastVisible = -1;
+  const animate = () => {
+    renderer.render(scene, camera);
+    let currentVisible = -1;
+    for (let i = 0; i < 12; i++) {
+      if (mindarThree.targetGroups[i].visible) {
+        currentVisible = i;
+        break;
       }
-    ];
-
-    let currentQuestion = 0;
-    let score = 0;
-
-    function startQuiz() {
-      currentQuestion = 0;
-      score = 0;
-      resultContainer.setAttribute('visible', false);
-      showQuestion();
     }
+    if (currentVisible !== lastVisible) {
+      if (lastVisible !== -1) arGroups[lastVisible].clear();
+      if (currentVisible !== -1) {
+        setTimeout(() => showMonthContent(currentVisible, arGroups[currentVisible]), 300);
+      }
+      lastVisible = currentVisible;
+    }
+    requestAnimationFrame(animate);
+  };
+  animate();
+}).catch(e => {
+  document.getElementById('info').innerHTML = currentLang === 'uk' 
+    ? "❌ Дозволь доступ до камери або онови сторінку." 
+    : "❌ Please allow camera access or refresh the page.";
+});
 
-    function showQuestion() {
-      if (currentQuestion < questions.length) {
-        const q = questions[currentQuestion];
-        questionText.setAttribute('value', q.question);
-        optionA.querySelector('a-text').setAttribute('value', q.options[0]);
-        optionB.querySelector('a-text').setAttribute('value', q.options[1]);
-        optionC.querySelector('a-text').setAttribute('value', q.options[2]);
-        optionD.querySelector('a-text').setAttribute('value', q.options[3]);
-      } else {
-        showResult();
+// === Головна механіка ===
+function showMonthContent(month, arGroup) {
+  if (collectedCrystals.includes(month)) {
+    showCrystalReward(month, arGroup);
+    return;
+  }
+
+  const img = images[month];
+  if (!img.complete) {
+    img.onload = () => showMonthContent(month, arGroup);
+    return;
+  }
+
+  arGroup.clear();
+  const texture = new THREE.Texture(img);
+  texture.needsUpdate = true;
+  const aspect = img.width / img.height;
+  const size = Math.min(1.8, window.innerWidth / 800 * 1.8);
+  const geo = new THREE.PlaneGeometry(size, size / aspect);
+  const frost = new THREE.Mesh(geo, new THREE.ShaderMaterial({
+    uniforms: { t: { value: 0 }, melt: { value: 0 }, tex: { value: texture } },
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+    fragmentShader: `
+      uniform float t; uniform float melt; uniform sampler2D tex;
+      varying vec2 vUv;
+      float noise(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233))) * 43758.5453); }
+      void main(){
+        float n = noise(vUv*12.0 + t);
+        float ice = smoothstep(0.45, 0.55, n) * (1.0 - melt);
+        vec3 col = mix(texture2D(tex, vUv).rgb, vec3(0.9,0.95,1.0), ice*0.7);
+        gl_FragColor = vec4(col, 1.0);
+      }
+    `,
+    transparent: true
+  }));
+  frost.position.z = 0.01;
+  arGroup.add(frost);
+
+  const startMelting = () => {
+    const iv = setInterval(() => {
+      frost.material.uniforms.melt.value += 0.03;
+      if (frost.material.uniforms.melt.value >= 1) {
+        clearInterval(iv);
+        showPuzzle(month, texture, arGroup, size, size / aspect);
+      }
+    }, 40);
+  };
+  addUnifiedTouch(renderer.domElement, startMelting);
+}
+
+function showPuzzle(month, baseTexture, arGroup, width, height) {
+  arGroup.clear();
+  const pieces = [];
+  const grid = 3;
+  const sizeW = width / grid;
+  const sizeH = height / grid;
+
+  for (let y = 0; y < grid; y++) {
+    for (let x = 0; x < grid; x++) {
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(baseTexture.image,
+        x * baseTexture.image.width / grid,
+        y * baseTexture.image.height / grid,
+        baseTexture.image.width / grid,
+        baseTexture.image.height / grid,
+        0, 0, 512, 512
+      );
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.needsUpdate = true;
+      const mesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(sizeW * 0.95, sizeH * 0.95),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.85 })
+      );
+      const posX = (x - grid/2 + 0.5) * sizeW + (Math.random() - 0.5) * sizeW * 1.5;
+      const posY = (grid/2 - y - 0.5) * sizeH + (Math.random() - 0.5) * sizeH * 1.5;
+      mesh.position.set(posX, posY, 0.02);
+      mesh.userData = { correctX: (x - grid/2 + 0.5) * sizeW, correctY: (grid/2 - y - 0.5) * sizeH };
+      arGroup.add(mesh);
+      pieces.push(mesh);
+    }
+  }
+
+  let selectedPiece = null;
+  const onTouchStart = (touch) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+    for (const p of pieces) {
+      if (raycaster.intersectObject(p).length) {
+        selectedPiece = p;
+        return;
       }
     }
+  };
+  const onTouchMove = (touch) => {
+    if (!selectedPiece) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    const x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+    const v = new THREE.Vector3(x, y, 0.5).unproject(camera);
+    selectedPiece.position.x = v.x;
+    selectedPiece.position.y = v.y;
+  };
+  const onTouchEnd = () => {
+    if (!selectedPiece) return;
+    const { correctX, correctY } = selectedPiece.userData;
+    const dist = Math.hypot(selectedPiece.position.x - correctX, selectedPiece.position.y - correctY);
+    if (dist < Math.max(sizeW, sizeH) * 0.4) {
+      selectedPiece.position.set(correctX, correctY, 0.02);
+      selectedPiece.material.opacity = 1;
+      pieces.splice(pieces.indexOf(selectedPiece), 1);
+      if (pieces.length === 0) setTimeout(() => showCrystalReward(month, arGroup), 500);
+    } else {
+      // Повернення
+      const sx = selectedPiece.position.x, sy = selectedPiece.position.y;
+      let f = 0;
+      const anim = () => {
+        f++;
+        if (f <= 10) {
+          const t = f / 10;
+          selectedPiece.position.x = sx + (correctX - sx) * t;
+          selectedPiece.position.y = sy + (correctY - sy) * t;
+          requestAnimationFrame(anim);
+        }
+      };
+      anim();
+    }
+    selectedPiece = null;
+  };
+  addUnifiedTouch(renderer.domElement, onTouchStart, onTouchMove, onTouchEnd);
+}
 
-    function handleAnswer(selected) {
-      const q = questions[currentQuestion];
-      if (selected === q.correct) {
-        score++;
+function showCrystalReward(month, arGroup) {
+  if (collectedCrystals.includes(month)) return;
+  collectedCrystals.push(month);
+  localStorage.setItem('ua-crystals2026', JSON.stringify(collectedCrystals));
+  updateCrystalsUI();
+
+  arGroup.clear();
+  const colors = ['#00ffff','#ff00ff','#00ff00','#ffff00','#ff8800','#ff0066','#0066ff','#ff3399','#33ff99','#ffcc00','#cc00ff','#00ccff'];
+  const crystal = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(0.35, 1),
+    new THREE.MeshStandardMaterial({
+      color: colors[month],
+      emissive: colors[month],
+      emissiveIntensity: 4,
+      roughness: 0,
+      metalness: 0.85
+    })
+  );
+  crystal.position.z = 0.2;
+  arGroup.add(crystal);
+
+  const animateCrystal = () => {
+    if (!arGroup.parent) return;
+    crystal.rotation.y += 0.015;
+    crystal.scale.setScalar(1 + Math.sin(Date.now()*0.004)*0.08);
+    requestAnimationFrame(animateCrystal);
+  };
+  animateCrystal();
+
+  if (collectedCrystals.length === 12) {
+    setTimeout(() => {
+      arGroup.clear();
+      const heart = new THREE.Group();
+      const geo = new THREE.BufferGeometry();
+      const vertices = [];
+      const c = Math.random() > 0.5 ? 0x0057b7 : 0xffd700;
+      for (let i = 0; i < 2500; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const r = Math.random() * 1.2;
+        vertices.push(Math.cos(a)*r, Math.sin(a)*r + (Math.random()-0.5)*0.3, (Math.random()-0.5)*0.3);
       }
-      currentQuestion++;
-      showQuestion();
-    }
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+      const pts = new THREE.Points(geo, new THREE.PointsMaterial({
+        color: c,
+        size: window.innerWidth > 600 ? 0.05 : 0.03,
+        transparent: true,
+        opacity: 0.95
+      }));
+      heart.add(pts);
+      arGroup.add(heart);
+      document.getElementById('info').innerHTML = translations[currentLang].infoComplete;
+    }, 2000);
+  }
+}
 
-    function showResult() {
-      questionText.setAttribute('value', '');
-      optionA.querySelector('a-text').setAttribute('value', '');
-      optionB.querySelector('a-text').setAttribute('value', '');
-      optionC.querySelector('a-text').setAttribute('value', '');
-      optionD.querySelector('a-text').setAttribute('value', '');
-      let badge = '★'.repeat(score) + '☆'.repeat(5 - score);
-      resultText.setAttribute('value', `Ви набрали ${score}/5 балів!\n${badge}`);
-      resultContainer.setAttribute('visible', true);
-    }
+function updateCrystalsUI() {
+  const container = document.getElementById('crystals');
+  container.innerHTML = '';
+  for (let i = 0; i < totalMonths; i++) {
+    const div = document.createElement('div');
+    div.className = 'crystal-slot';
+    div.innerHTML = collectedCrystals.includes(i) ? '✦' : (i+1);
+    div.style.background = collectedCrystals.includes(i) 
+      ? 'linear-gradient(45deg, #00ffff, #ff00ff)' 
+      : 'rgba(0,0,0,0.7)';
+    container.appendChild(div);
+  }
+}
 
-    // Додаємо обробники кліків
-    optionA.addEventListener('click', () => handleAnswer('A'));
-    optionB.addEventListener('click', () => handleAnswer('B'));
-    optionC.addEventListener('click', () => handleAnswer('C'));
-    optionD.addEventListener('click', () => handleAnswer('D'));
-    restartBtn.addEventListener('click', startQuiz);
+updateCrystalsUI();
+</script>
 
-    // Події маркера
-    marker.addEventListener('markerFound', () => {
-      scanText.style.display = 'none';
-      startQuiz();
-    });
-
-    marker.addEventListener('markerLost', () => {
-      scanText.style.display = 'block';
-    });
-
-    // Перевірка доступу до камери
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      .then(stream => {
-        console.log('Доступ до задньої камери надано');
-      })
-      .catch(err => {
-        scanText.textContent = 'Дозвольте доступ до задньої камери для AR';
-        console.error('Помилка доступу до камери:', err);
-      });
-
-    // Фікс висоти для мобільних браузерів
-    function fixHeight() {
-      document.body.style.height = window.innerHeight + 'px';
-    }
-    window.addEventListener('resize', fixHeight);
-    fixHeight();
-  </script>
 </body>
 </html>
