@@ -7,6 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAQAAAAAAAoAQAAFgAAACgAAAAQAAAAIAAAAAEABAAAAAAAgAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAP//AP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAT/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDAREAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -36,7 +37,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) 
+      padding: env(safe-area-inset-top) env(safe-area-inset-right)
                 env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
     #info {
@@ -104,10 +105,10 @@
   <div id="crystals"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.10/dist/mindar-target.prod.js"></script>
 <script type="module">
+// === Правильні імпорти (без 404) ===
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js';
-import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.10/dist/mindar-target-three.prod.js';
+import { MindARThree } from 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.10/dist/mindar-target-three.module.js';
 
 // === Мови ===
 const translations = {
@@ -136,7 +137,6 @@ function setLang(lang) {
   document.getElementById('info').innerHTML = t.infoScan;
   document.getElementById('lang-toggle').textContent = t.langBtn;
   document.getElementById('etsy-link').textContent = t.etsyBtn;
-  updateCrystalsUI(); // оновлюємо UI (номери місяців не змінюються, але для майбутнього)
 }
 
 // Ініціалізація мови
@@ -157,14 +157,15 @@ const totalMonths = 12;
 const images = [];
 for (let i = 1; i <= 12; i++) {
   const img = new Image();
-  img.src = `images/${i.toString().padStart(2, '0')}.jpg`;
+  // ✅ Використовуємо PNG (можна змінити на .jpg, якщо потрібно)
+  img.src = `images/${i.toString().padStart(2, '0')}.png`;
   images.push(img);
 }
 
 // === MindAR ===
 const mindarThree = new MindARThree({
   container: document.getElementById('mindar-container'),
-  imageTargetSrc: 'calendar.mind',
+  imageTargetSrc: 'calendar.mind', // 12 маркерів у одному файлі
   maxTrack: 12,
   uiScanningText: currentLang === 'uk' ? "Шукаємо маркер..." : "Scanning for marker...",
   uiLoadingText: currentLang === 'uk' ? "Завантажуємо..." : "Loading...",
@@ -207,9 +208,8 @@ function addUnifiedTouch(el, onStart, onMove, onEnd) {
     el.addEventListener('touchend', e => { e.preventDefault(); onEnd(); }, { passive: false });
   } else {
     el.addEventListener('mousedown', e => onStart(e));
-    el.addEventListener('mousemove', e => { if (el.dragging) onMove(e); });
-    el.addEventListener('mouseup', onEnd);
-    el.addEventListener('mouseleave', onEnd);
+    window.addEventListener('mousemove', e => { if (window.dragging) onMove(e); });
+    window.addEventListener('mouseup', onEnd);
   }
 }
 
@@ -236,8 +236,9 @@ mindarThree.start().then(() => {
   };
   animate();
 }).catch(e => {
-  document.getElementById('info').innerHTML = currentLang === 'uk' 
-    ? "❌ Дозволь доступ до камери або онови сторінку." 
+  console.error("AR Error:", e);
+  document.getElementById('info').innerHTML = currentLang === 'uk'
+    ? "❌ Дозволь доступ до камери або онови сторінку."
     : "❌ Please allow camera access or refresh the page.";
 });
 
@@ -358,7 +359,6 @@ function showPuzzle(month, baseTexture, arGroup, width, height) {
       pieces.splice(pieces.indexOf(selectedPiece), 1);
       if (pieces.length === 0) setTimeout(() => showCrystalReward(month, arGroup), 500);
     } else {
-      // Повернення
       const sx = selectedPiece.position.x, sy = selectedPiece.position.y;
       let f = 0;
       const anim = () => {
@@ -439,8 +439,8 @@ function updateCrystalsUI() {
     const div = document.createElement('div');
     div.className = 'crystal-slot';
     div.innerHTML = collectedCrystals.includes(i) ? '✦' : (i+1);
-    div.style.background = collectedCrystals.includes(i) 
-      ? 'linear-gradient(45deg, #00ffff, #ff00ff)' 
+    div.style.background = collectedCrystals.includes(i)
+      ? 'linear-gradient(45deg, #00ffff, #ff00ff)'
       : 'rgba(0,0,0,0.7)';
     container.appendChild(div);
   }
