@@ -119,7 +119,7 @@
 
     <div id="ar-container">
         <a-scene 
-            mindar-image="imageTargetSrc: https://raw.githubusercontent.com/Lessa2332/your-calendar/main/calendar.mind; autoStart: false; uiLoading: no; uiScanning: no; uiError: no;"
+            mindar-image="imageTargetSrc: https://lessa2332.github.io/your-calendar/calendar.mind; autoStart: false; uiLoading: no; uiScanning: no; uiError: no;"
             embedded
             color-space="sRGB"
             renderer="colorManagement: true; physicallyCorrectLights"
@@ -342,7 +342,8 @@
             }
 
             async loadAndShowPuzzle(targetIndex) {
-                const url = `https://raw.githubusercontent.com/Lessa2332/your-calendar/main/images/${String(targetIndex + 1).padStart(2, '0')}.jpg`;
+                // ✅ ВИПРАВЛЕНО: GitHub Pages замість raw.githubusercontent.com
+                const url = `https://lessa2332.github.io/your-calendar/images/${String(targetIndex + 1).padStart(2, '0')}.jpg`;
                 const container = document.getElementById(`puzzle-container-${targetIndex}`);
                 while (container.firstChild) container.removeChild(container.firstChild);
 
