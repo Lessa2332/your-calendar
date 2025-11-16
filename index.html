@@ -16,6 +16,9 @@
       background: #000;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     #mindar-container {
       position: absolute;
@@ -36,7 +39,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 20px;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
     #info {
       text-align: center;
@@ -45,50 +48,61 @@
       padding: 10px 16px;
       background: rgba(0,0,0,0.5);
       border-radius: 12px;
-      font-size: 16px;
+      font-size: clamp(14px, 4vw, 18px);
       line-height: 1.4;
       max-width: 90%;
       margin: 0 auto;
+      pointer-events: none;
     }
     #top-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 10px;
+      padding: 10px 12px;
+      gap: 10px;
+      pointer-events: auto;
     }
     .lang-btn, .etsy-btn {
       pointer-events: auto;
       background: rgba(0, 200, 255, 0.2);
       border: 1px solid #00ffff;
       color: white;
-      padding: 8px 16px;
+      padding: 6px 12px;
       border-radius: 20px;
       font-size: 14px;
       cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: background 0.2s ease;
+    }
+    .lang-btn:hover, .etsy-btn:hover {
+      background: rgba(0, 200, 255, 0.4);
     }
     #crystals {
       display: flex;
-      gap: 10px;
+      gap: clamp(8px, 3vw, 14px);
       justify-content: center;
-      padding: 20px;
+      padding: 0 8px 20px;
+      pointer-events: none;
       flex-wrap: wrap;
     }
     .crystal-slot {
-      width: 50px;
-      height: 50px;
-      border: 2px solid #00ffff;
+      width: clamp(40px, 12vw, 56px);
+      height: clamp(40px, 12vw, 56px);
+      border: 2px solid #00ffff77;
       border-radius: 50%;
       background: rgba(0,0,0,0.7);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: clamp(24px, 7vw, 36px);
       font-weight: bold;
       color: white;
+      transition: all 0.3s ease;
     }
     .crystal-slot.collected {
       background: linear-gradient(45deg, #00ffff, #ff00ff);
       transform: scale(1.1);
+      box-shadow: 0 0 10px #00ffff;
     }
     #loading {
       position: absolute;
@@ -98,6 +112,7 @@
       color: #00ffff;
       font-size: 18px;
       z-index: 101;
+      display: none;
       text-align: center;
     }
     .spinner {
@@ -118,7 +133,7 @@
 <body>
   <div id="loading">
     <div class="spinner"></div>
-    <div>Loading AR Experience...</div>
+    <div id="loading-text">Loading AR Experience...</div>
   </div>
   
   <div id="mindar-container"></div>
@@ -131,125 +146,124 @@
     
     <div id="info">Point your camera at any calendar marker ❤️</div>
     
-    <div id="crystals">
-      <!-- Crystals will be added here -->
-    </div>
+    <div id="crystals"></div>
   </div>
 
-  <!-- Three.js from CDNJS -->
+  <!-- Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
-  <!-- Try multiple MindAR CDNs -->
+  <!-- MindAR with fallback -->
   <script>
-    // Try to load MindAR from multiple sources
-    function loadScript(src, onSuccess, onError) {
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = onSuccess;
-      script.onerror = onError;
-      document.head.appendChild(script);
+    function loadMindAR() {
+      return new Promise((resolve, reject) => {
+        if (typeof MindARThree !== 'undefined') {
+          resolve();
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-three.prod.js';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Failed to load MindAR'));
+        document.head.appendChild(script);
+      });
     }
-
-    let mindarLoaded = false;
-
-    function initializeAfterMindAR() {
-      if (mindarLoaded) return;
-      mindarLoaded = true;
-      
-      console.log('MindAR loaded, starting app...');
-      setTimeout(initializeApp, 100);
-    }
-
-    // Try different CDNs
-    loadScript(
-      'https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-image-three.prod.js',
-      initializeAfterMindAR,
-      function() {
-        console.log('CDN 1 failed, trying alternative...');
-        loadScript(
-          'https://unpkg.com/mind-ar@1.2.3/dist/mindar-image-three.prod.js',
-          initializeAfterMindAR,
-          function() {
-            console.log('All CDNs failed, showing error');
-            document.getElementById('loading').innerHTML = '❌ Failed to load AR library';
-          }
-        );
-      }
-    );
   </script>
 
   <script>
     // Main application
-    function initializeApp() {
-      console.log('THREE available:', typeof THREE !== 'undefined');
-      console.log('MindARThree available:', typeof MindARThree !== 'undefined');
+    async function initializeApp() {
+      const loadingEl = document.getElementById('loading');
       
-      if (typeof MindARThree === 'undefined') {
-        document.getElementById('loading').innerHTML = '❌ AR library not available';
-        return;
-      }
-
-      const translations = {
-        en: {
-          infoScan: "Point your camera at any calendar marker ❤️",
-          infoComplete: "🎉 CONGRATULATIONS! All crystals collected!",
-          langBtn: "Українська",
-          etsyBtn: "Shop on Etsy"
-        },
-        uk: {
-          infoScan: "Наведи камеру на будь-який маркер календаря ❤️",
-          infoComplete: "🎉 ВІТАЮ! Всі кристали зібрані!",
-          langBtn: "English",
-          etsyBtn: "Купити на Etsy"
-        }
-      };
-
-      let currentLang = 'en';
-      let collectedCrystals = JSON.parse(localStorage.getItem('ua-crystals2026') || '[]');
-      const totalMonths = 12;
-
-      // UI functions
-      function setLang(lang) {
-        currentLang = lang;
-        localStorage.setItem('calendar-lang', lang);
-        const t = translations[lang];
-        document.getElementById('info').innerHTML = t.infoScan;
-        document.getElementById('lang-toggle').textContent = t.langBtn;
-        document.getElementById('etsy-link').textContent = t.etsyBtn;
-        updateCrystalsUI();
-      }
-
-      function updateCrystalsUI() {
-        const container = document.getElementById('crystals');
-        container.innerHTML = '';
-        for (let i = 0; i < totalMonths; i++) {
-          const div = document.createElement('div');
-          div.className = 'crystal-slot';
-          if (collectedCrystals.includes(i)) {
-            div.innerHTML = '✦';
-            div.classList.add('collected');
-          } else {
-            div.innerHTML = (i + 1);
-          }
-          container.appendChild(div);
-        }
-      }
-
-      // Event listeners
-      document.getElementById('lang-toggle').addEventListener('click', () => {
-        setLang(currentLang === 'en' ? 'uk' : 'en');
-      });
-      
-      document.getElementById('etsy-link').addEventListener('click', () => {
-        window.open('https://smartlessa.etsy.com', '_blank');
-      });
-
-      // Initialize language
-      const savedLang = localStorage.getItem('calendar-lang');
-      if (savedLang === 'uk') setLang('uk');
-
-      // Initialize AR
       try {
+        await loadMindAR();
+        
+        if (typeof MindARThree === 'undefined') {
+          throw new Error('MindARThree not available');
+        }
+
+        console.log('✅ All libraries loaded');
+
+        const translations = {
+          en: {
+            infoScan: "Point your camera at any calendar marker ❤️",
+            infoComplete: "🎉 CONGRATULATIONS! All crystals collected!",
+            langBtn: "Українська",
+            etsyBtn: "Shop on Etsy",
+            loading: "Loading AR Experience...",
+            errorCamera: "❌ Please allow camera access",
+            errorLibrary: "❌ AR not supported"
+          },
+          uk: {
+            infoScan: "Наведи камеру на будь-який маркер календаря ❤️",
+            infoComplete: "🎉 ВІТАЮ! Всі кристали зібрані!",
+            langBtn: "English",
+            etsyBtn: "Купити на Etsy",
+            loading: "Завантажуємо AR...",
+            errorCamera: "❌ Дозволь доступ до камери",
+            errorLibrary: "❌ AR не підтримується"
+          }
+        };
+
+        let currentLang = 'en';
+        let collectedCrystals = JSON.parse(localStorage.getItem('ua-crystals2026') || '[]');
+        const totalMonths = 12;
+
+        // Active crystals for animation
+        const activeCrystals = new Map();
+        let currentVisibleAnchor = -1;
+        let eventHandlers = new Map();
+
+        // UI functions
+        function setLang(lang) {
+          currentLang = lang;
+          localStorage.setItem('calendar-lang', lang);
+          const t = translations[lang];
+          document.getElementById('info').innerHTML = t.infoScan;
+          document.getElementById('lang-toggle').textContent = t.langBtn;
+          document.getElementById('etsy-link').textContent = t.etsyBtn;
+          document.getElementById('loading-text').textContent = t.loading;
+          updateCrystalsUI();
+        }
+
+        function updateCrystalsUI() {
+          const container = document.getElementById('crystals');
+          container.innerHTML = '';
+          for (let i = 0; i < totalMonths; i++) {
+            const div = document.createElement('div');
+            div.className = 'crystal-slot';
+            if (collectedCrystals.includes(i)) {
+              div.innerHTML = '✦';
+              div.classList.add('collected');
+            } else {
+              div.innerHTML = (i + 1);
+            }
+            container.appendChild(div);
+          }
+        }
+
+        // Event listeners with better handling
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+          setLang(currentLang === 'en' ? 'uk' : 'en');
+        });
+        
+        document.getElementById('etsy-link').addEventListener('click', (e) => {
+          e.preventDefault();
+          // Better approach for iOS Safari
+          const link = document.createElement('a');
+          link.href = 'https://smartlessa.etsy.com';
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        });
+
+        // Initialize language
+        const savedLang = localStorage.getItem('calendar-lang');
+        if (savedLang === 'uk') setLang('uk');
+
+        // Initialize AR
         const mindarThree = new MindARThree({
           container: document.getElementById("mindar-container"),
           imageTargetSrc: "calendar.mind",
@@ -266,27 +280,53 @@
         scene.add(light);
         scene.add(new THREE.AmbientLight(0xffffff, 0.5));
 
-        // Create anchor groups
+        // Create anchor groups with validation
         const anchorGroups = [];
-        for (let i = 0; i < 12; i++) {
-          const group = new THREE.Group();
-          const anchor = mindarThree.addAnchor(i);
-          anchor.group.add(group);
-          anchorGroups.push(group);
+        for (let i = 0; i < totalMonths; i++) {
+          try {
+            const group = new THREE.Group();
+            const anchor = mindarThree.addAnchor(i);
+            if (!anchor) {
+              console.warn(`⚠️ No anchor for month ${i}`);
+              continue;
+            }
+            anchor.group.add(group);
+            anchorGroups[i] = group;
+          } catch (error) {
+            console.warn(`⚠️ Failed to create anchor for month ${i}:`, error);
+          }
         }
 
+        // Global touch handler
+        function handleGlobalTouch(e) {
+          e.preventDefault();
+          
+          if (currentVisibleAnchor === -1) return;
+          if (!anchorGroups[currentVisibleAnchor]) return;
+          
+          showCrystal(currentVisibleAnchor, anchorGroups[currentVisibleAnchor]);
+        }
+
+        // Add global event listeners once
+        renderer.domElement.addEventListener('click', handleGlobalTouch);
+        renderer.domElement.addEventListener('touchstart', handleGlobalTouch, { passive: false });
+
         // Start AR
+        loadingEl.style.display = 'block';
+
         mindarThree.start().then(() => {
-          document.getElementById('loading').style.display = 'none';
+          console.log('✅ AR started successfully');
+          loadingEl.style.display = 'none';
           
           let lastVisible = -1;
 
+          // Main animation loop
           const animate = () => {
             renderer.render(scene, camera);
             
             // Check visible markers
             let currentVisible = -1;
-            for (let i = 0; i < 12; i++) {
+            for (let i = 0; i < totalMonths; i++) {
               if (mindarThree.anchors[i] && mindarThree.anchors[i].visible) {
                 currentVisible = i;
                 break;
@@ -294,22 +334,36 @@
             }
 
             if (currentVisible !== lastVisible) {
-              if (lastVisible !== -1) {
+              // Clean up previous
+              if (lastVisible !== -1 && anchorGroups[lastVisible]) {
                 anchorGroups[lastVisible].clear();
               }
-              if (currentVisible !== -1) {
+              
+              // Setup new
+              if (currentVisible !== -1 && anchorGroups[currentVisible]) {
                 showMonthContent(currentVisible, anchorGroups[currentVisible]);
               }
+              
               lastVisible = currentVisible;
+              currentVisibleAnchor = currentVisible;
             }
+
+            // Animate active crystals
+            activeCrystals.forEach((crystal, month) => {
+              if (crystal && crystal.rotation) {
+                crystal.rotation.y += 0.02;
+                crystal.rotation.x += 0.01;
+              }
+            });
 
             requestAnimationFrame(animate);
           };
           animate();
 
         }).catch(error => {
-          document.getElementById('loading').innerHTML = '❌ Camera access denied';
-          console.error('AR failed:', error);
+          loadingEl.style.display = 'none';
+          document.getElementById('info').innerHTML = translations[currentLang].errorCamera;
+          console.error('❌ AR failed:', error);
         });
 
         function showMonthContent(month, arGroup) {
@@ -319,11 +373,15 @@
           }
 
           arGroup.clear();
+          activeCrystals.delete(month);
 
           // Create simple 3D content
+          const colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff, 
+                         0xff8800, 0x88ff00, 0x0088ff, 0xff0088, 0x8800ff, 0x00ff88];
+          
           const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
           const material = new THREE.MeshBasicMaterial({ 
-            color: 0x00ff00,
+            color: colors[month % colors.length],
             transparent: true,
             opacity: 0.8
           });
@@ -331,13 +389,25 @@
           const cube = new THREE.Mesh(geometry, material);
           arGroup.add(cube);
 
-          // Add touch handler
-          function handleTouch() {
-            showCrystal(month, arGroup);
-          }
-
-          renderer.domElement.addEventListener('click', handleTouch);
-          renderer.domElement.addEventListener('touchstart', handleTouch);
+          // Add month number
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.width = 256;
+          canvas.height = 256;
+          context.fillStyle = '#ffffff';
+          context.font = 'bold 80px Arial';
+          context.textAlign = 'center';
+          context.textBaseline = 'middle';
+          context.fillText((month + 1).toString(), 128, 128);
+          
+          const texture = new THREE.CanvasTexture(canvas);
+          const textMaterial = new THREE.MeshBasicMaterial({ 
+            map: texture,
+            transparent: true
+          });
+          const textPlane = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), textMaterial);
+          textPlane.position.z = 0.2;
+          arGroup.add(textPlane);
         }
 
         function showCrystal(month, arGroup) {
@@ -359,28 +429,41 @@
           
           const crystal = new THREE.Mesh(geometry, material);
           arGroup.add(crystal);
-
-          // Animate crystal
-          function animateCrystal() {
-            if (!arGroup.parent) return;
-            crystal.rotation.y += 0.02;
-            requestAnimationFrame(animateCrystal);
-          }
-          animateCrystal();
+          activeCrystals.set(month, crystal);
 
           // Check completion
           if (collectedCrystals.length === totalMonths) {
-            document.getElementById('info').innerHTML = translations[currentLang].infoComplete;
+            setTimeout(() => {
+              document.getElementById('info').innerHTML = translations[currentLang].infoComplete;
+            }, 1000);
           }
         }
 
-      } catch (error) {
-        document.getElementById('loading').innerHTML = '❌ AR initialization failed';
-        console.error('AR error:', error);
-      }
+        // Cleanup function
+        function cleanup() {
+          renderer.domElement.removeEventListener('click', handleGlobalTouch);
+          renderer.domElement.removeEventListener('touchstart', handleGlobalTouch);
+          activeCrystals.clear();
+        }
 
-      // Initial UI update
-      updateCrystalsUI();
+        // Handle page unload
+        window.addEventListener('beforeunload', cleanup);
+
+        // Initial UI update
+        updateCrystalsUI();
+
+      } catch (error) {
+        loadingEl.style.display = 'none';
+        document.getElementById('info').innerHTML = '❌ AR initialization failed';
+        console.error('❌ App error:', error);
+      }
+    }
+
+    // Start app when ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+      initializeApp();
     }
   </script>
 </body>
