@@ -184,13 +184,14 @@
 
   <div id="error-fallback">
     <h3>🪄 AR Magic Loading...</h3>
-    <p>If AR doesn't start, try these steps:</p>
+    <p>If AR doesn't start automatically, try:</p>
     <ol style="text-align: left; display: inline-block; margin: 15px 0;">
       <li>Refresh the page</li>
       <li>Allow camera access</li>
-      <li>Use a device with a rear camera</li>
+      <li>Use Chrome or Safari</li>
     </ol>
     <button class="retry-btn" id="retry-ar">Try Again</button>
+    <button class="retry-btn" id="load-demo" style="margin-left: 10px;">Load Demo Version</button>
   </div>
   
   <div id="mindar-container"></div>
@@ -208,13 +209,91 @@
 
   <!-- Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  
-  <!-- MindAR from working CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-three.prod.js"></script>
 
   <script>
-    // Simple working version
+    // Try multiple CDN sources for MindAR
+    const MINDAR_SOURCES = [
+      'https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar.prod.js',
+      'https://unpkg.com/mind-ar@1.1.5/dist/mindar.prod.js',
+      'https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar.prod.js',
+      'https://unpkg.com/mind-ar@1.2.3/dist/mindar.prod.js'
+    ];
+
+    const MINDAR_THREE_SOURCES = [
+      'https://cdn.jsdelivr.net/npm/mind-ar@1.1.5/dist/mindar-three.prod.js',
+      'https://unpkg.com/mind-ar@1.1.5/dist/mindar-three.prod.js',
+      'https://cdn.jsdelivr.net/npm/mind-ar@1.2.3/dist/mindar-three.prod.js',
+      'https://unpkg.com/mind-ar@1.2.3/dist/mindar-three.prod.js'
+    ];
+
+    let mindarLoaded = false;
+    let currentSourceIndex = 0;
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    async function loadMindAR() {
+      if (typeof MindARThree !== 'undefined') {
+        console.log('✅ MindAR already loaded');
+        return true;
+      }
+
+      while (currentSourceIndex < MINDAR_SOURCES.length) {
+        try {
+          console.log(`🔄 Trying MindAR source ${currentSourceIndex + 1}: ${MINDAR_SOURCES[currentSourceIndex]}`);
+          
+          await loadScript(MINDAR_SOURCES[currentSourceIndex]);
+          await loadScript(MINDAR_THREE_SOURCES[currentSourceIndex]);
+          
+          if (typeof MindARThree !== 'undefined') {
+            console.log('✅ MindAR loaded successfully from:', MINDAR_SOURCES[currentSourceIndex]);
+            mindarLoaded = true;
+            return true;
+          }
+        } catch (error) {
+          console.log(`❌ Failed to load from source ${currentSourceIndex + 1}:`, error);
+        }
+        
+        currentSourceIndex++;
+      }
+      
+      return false;
+    }
+
+    // Simple demo version without AR
+    function initDemoVersion() {
+      console.log('🚀 Starting demo version');
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-fallback').style.display = 'none';
+      
+      const infoEl = document.getElementById('info');
+      infoEl.innerHTML = '🎮 Demo Mode: Touch the screen to collect crystals!';
+      infoEl.style.pointerEvents = 'auto';
+      
+      let demoCrystals = 0;
+      
+      infoEl.addEventListener('click', () => {
+        if (demoCrystals < totalMonths) {
+          collectedCrystals.push(demoCrystals);
+          demoCrystals++;
+          saveData();
+          updateCrystalsUI();
+          
+          if (demoCrystals === totalMonths) {
+            infoEl.innerHTML = translations[currentLang].infoComplete;
+          }
+        }
+      });
+    }
+
+    // Main application data
     const DATA_VERSION = '2026-v1';
     const totalMonths = 12;
 
@@ -248,7 +327,7 @@
     let collectedCrystals = [];
     let mindarThree = null;
 
-    // Load data
+    // Data functions
     function loadData() {
       try {
         const saved = JSON.parse(localStorage.getItem('ua-calendar-data') || '{}');
@@ -316,18 +395,21 @@
     }
 
     // Initialize AR
-    function initializeAR() {
-      console.log('Checking libraries...');
-      console.log('THREE:', typeof THREE);
-      console.log('MindARThree:', typeof MindARThree);
+    async function initializeAR() {
+      console.log('🔄 Starting AR initialization...');
       
-      if (typeof MindARThree === 'undefined') {
-        showError('AR library not loaded. Please refresh the page.');
+      const loadingEl = document.getElementById('loading');
+      loadingEl.style.display = 'block';
+
+      // Try to load MindAR
+      const mindarSuccess = await loadMindAR();
+      
+      if (!mindarSuccess) {
+        showError('AR library failed to load. Try the demo version or refresh.');
         return;
       }
 
-      const loadingEl = document.getElementById('loading');
-      loadingEl.style.display = 'block';
+      console.log('✅ MindAR loaded, initializing AR experience...');
 
       try {
         // Use the correct MindAR API
@@ -345,7 +427,7 @@
         light.position.set(0, 1, 1);
         scene.add(light);
 
-        // Create simple anchors
+        // Create anchors
         const anchorGroups = [];
         for (let i = 0; i < totalMonths; i++) {
           const group = new THREE.Group();
@@ -354,7 +436,7 @@
             anchor.group.add(group);
             anchorGroups[i] = group;
           } catch (e) {
-            console.warn('Anchor error:', e);
+            console.warn('Anchor error for month', i, e);
           }
         }
 
@@ -365,7 +447,7 @@
           const y = e.clientY || (e.touches && e.touches[0].clientY);
           showTouchFeedback(x, y);
           
-          // Simple interaction - collect crystal on any touch
+          // Find visible marker and collect crystal
           for (let i = 0; i < totalMonths; i++) {
             if (anchorGroups[i] && mindarThree.anchors[i] && mindarThree.anchors[i].visible) {
               if (!collectedCrystals.includes(i)) {
@@ -381,7 +463,7 @@
 
         // Start AR
         mindarThree.start().then(() => {
-          console.log('AR started!');
+          console.log('🎉 AR started successfully!');
           loadingEl.style.display = 'none';
           
           let lastVisible = -1;
@@ -389,7 +471,7 @@
           function animate() {
             renderer.render(scene, camera);
             
-            // Show simple content for visible markers
+            // Show content for visible markers
             let currentVisible = -1;
             for (let i = 0; i < totalMonths; i++) {
               if (mindarThree.anchors[i] && mindarThree.anchors[i].visible) {
@@ -403,7 +485,7 @@
                 anchorGroups[lastVisible].clear();
               }
               if (currentVisible !== -1 && anchorGroups[currentVisible]) {
-                showSimpleContent(currentVisible, anchorGroups[currentVisible]);
+                showMonthContent(currentVisible, anchorGroups[currentVisible]);
               }
               lastVisible = currentVisible;
             }
@@ -414,18 +496,18 @@
 
         }).catch(error => {
           loadingEl.style.display = 'none';
-          showError('Camera access denied or AR not supported');
-          console.error('AR error:', error);
+          showError('Camera access denied or AR not supported on this device');
+          console.error('AR startup error:', error);
         });
 
       } catch (error) {
         loadingEl.style.display = 'none';
-        showError('AR initialization failed');
-        console.error('Setup error:', error);
+        showError('AR initialization failed: ' + error.message);
+        console.error('AR setup error:', error);
       }
     }
 
-    function showSimpleContent(month, group) {
+    function showMonthContent(month, group) {
       if (collectedCrystals.includes(month)) {
         showCrystal(month, group);
         return;
@@ -433,7 +515,7 @@
 
       group.clear();
 
-      // Simple rotating cube
+      // Create rotating cube with month number
       const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
       const material = new THREE.MeshBasicMaterial({ 
         color: 0x00ff00,
@@ -462,7 +544,7 @@
       textPlane.position.z = 0.2;
       group.add(textPlane);
 
-      // Simple rotation animation
+      // Rotation animation
       function animateCube() {
         if (!group.parent) return;
         cube.rotation.y += 0.02;
@@ -538,6 +620,10 @@
         try { mindarThree.stop(); } catch(e) {}
       }
       initializeAR();
+    });
+
+    document.getElementById('load-demo').addEventListener('click', () => {
+      initDemoVersion();
     });
 
     // Set initial language
