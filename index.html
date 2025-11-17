@@ -118,7 +118,7 @@
 
     <div id="ar-container">
         <a-scene 
-            mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/lessa2332/your-calendar@master/calendar.mind; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 1000;"
+            mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/lessa2332/your-calendar@main/calendar.mind; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 1000;"
             embedded
             color-space="sRGB"
             renderer="colorManagement: true; physicallyCorrectLights"
@@ -343,7 +343,7 @@
             }
 
             async loadAndShowPuzzle(targetIndex) {
-                const url = `https://cdn.jsdelivr.net/gh/lessa2332/your-calendar@master/images/${String(targetIndex + 1).padStart(2, '0')}.jpg`;
+                const url = `https://cdn.jsdelivr.net/gh/lessa2332/your-calendar@main/images/${String(targetIndex + 1).padStart(2, '0')}.jpg`;
                 const container = document.getElementById(`puzzle-container-${targetIndex}`);
                 while (container.firstChild) container.removeChild(container.firstChild);
 
