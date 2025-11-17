@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>AR Calendar Puzzle | Календар AR Пазли</title>
     
-    <!-- 🔥 Критично: правильно завантажуємо скрипти -->
-    <script defer src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <!-- 🔥 Критично: завантажуємо скрипти без defer для стабільності -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -117,9 +117,9 @@
     </div>
 
     <div id="ar-container">
-        <!-- 🔥 Оновлений <a-scene> без конфліктних параметрів -->
+        <!-- 🔥 ВИПРАВЛЕНО: CDN для .mind файлу та правильні параметри фільтра -->
         <a-scene 
-            mindar-image="imageTargetSrc: https://lessa2332.github.io/your-calendar/calendar.mind; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 0.01;"
+            mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/lessa2332/your-calendar/calendar.mind; autoStart: false; uiLoading: no; uiScanning: no; uiError: no; filterMinCF: 0.001; filterBeta: 1000;"
             embedded
             color-space="sRGB"
             renderer="antialias: true; sortObjects: true"
@@ -245,26 +245,23 @@
                 this.setupEventListeners();
                 this.setupDragAndDrop();
 
-                // 🔥 Критична перевірка ініціалізації
+                // 🔥 Покращена перевірка ініціалізації
                 this.scene.addEventListener('loaded', () => {
                     try {
-                        // Перевірка рендерера
-                        if (!this.scene.renderer) {
-                            throw new Error('Renderer not initialized');
-                        }
-                        // Перевірка MindAR компонента
-                        const mindarComp = this.scene.components['mindar-image'];
-                        if (!mindarComp || typeof mindarComp.setup !== 'function') {
-                            throw new Error('MindAR component not ready');
-                        }
-
-                        // Створюємо сцену
-                        this.createTargetContainers();
-                        this.createGrid();
-
+                        // Даємо час на ініціалізацію компонентів
                         setTimeout(() => {
+                            const mindarComp = this.scene.components['mindar-image'];
+                            if (!mindarComp || typeof mindarComp.setup !== 'function') {
+                                throw new Error('MindAR component not ready - check console for CORS errors');
+                            }
+
+                            // Створюємо сцену
+                            this.createTargetContainers();
+                            this.createGrid();
+
                             document.getElementById('loading-screen').style.display = 'none';
-                        }, 500);
+                            document.getElementById('processing-info').textContent = "✅ AR Ready! Tap Start to begin";
+                        }, 1000);
                     } catch (e) {
                         console.error('Init failed:', e);
                         document.getElementById('processing-info').textContent = `❌ Error: ${e.message}`;
@@ -359,12 +356,13 @@
             }
 
             async loadAndShowPuzzle(targetIndex) {
-                // 🔥 Використовуємо GitHub Pages для зображень
-                const url = `https://lessa2332.github.io/your-calendar/images/${String(targetIndex + 1).padStart(2, '0')}.jpg`;
+                // 🔥 ВИПРАВЛЕНО: CDN для зображень пазлів
+                const url = `https://cdn.jsdelivr.net/gh/lessa2332/your-calendar/images/${String(targetIndex + 1).padStart(2, '0')}.jpg`;
                 const container = document.getElementById(`puzzle-container-${targetIndex}`);
                 while (container.firstChild) container.removeChild(container.firstChild);
 
                 try {
+                    document.getElementById('processing-info').textContent = "🔄 Loading puzzle...";
                     const pieces = await this.imageSplitter.splitImage(url, 3, 3);
                     pieces.forEach((piece, idx) => {
                         const angle = (idx / 9) * Math.PI * 2;
@@ -385,9 +383,10 @@
                         pieceEl.appendChild(plane);
                         container.appendChild(pieceEl);
                     });
+                    document.getElementById('processing-info').textContent = "✅ Puzzle loaded! Drag pieces to board";
                 } catch (err) {
                     console.error("Puzzle load error:", err);
-                    document.getElementById('processing-info').textContent = "⚠️ Image not loaded. Check internet.";
+                    document.getElementById('processing-info').textContent = "⚠️ Failed to load image. Check internet connection.";
                 }
             }
 
@@ -477,6 +476,7 @@
                     fx.appendChild(star);
                 }
                 document.getElementById('completion-message').classList.remove('hidden');
+                document.getElementById('processing-info').textContent = "🎉 Puzzle completed! Amazing!";
             }
 
             resetPuzzle() {
@@ -497,6 +497,7 @@
                     slot.occupied = false;
                     slot.element.setAttribute('visible', 'false');
                 });
+                document.getElementById('processing-info').textContent = "🔍 Point camera at calendar image";
             }
         }
 
