@@ -313,8 +313,11 @@
                     const mindarSystem = this.scene.systems['mindar-image-system'];  // Виправлено: systems['mindar-image-system']
                     if (mindarSystem && typeof mindarSystem.start === 'function') {
                         console.log('Starting MindAR...');
-                        mindarSystem.start();
-                        document.getElementById('processing-info').textContent = "📱 Allow camera & point at calendar (one of 12 trained images)";
+                        // Додано затримку для ініціалізації object3D
+                        setTimeout(() => {
+                            mindarSystem.start();
+                            document.getElementById('processing-info').textContent = "📱 Allow camera & point at calendar (one of 12 trained images)";
+                        }, 500);
                     } else {
                         console.error('MindAR start failed');
                         document.getElementById('processing-info').textContent = "❌ MindAR start failed. Reload page.";
@@ -490,11 +493,11 @@
             // Створюємо <a-scene>
             const scene = document.createElement('a-scene');
             scene.setAttribute('mindar-image', 'imageTargetSrc: https://cdn.jsdelivr.net/gh/lessa2332/your-calendar/calendar.mind; autoStart: false; uiLoading: yes; uiScanning: yes; uiError: yes; filterMinCF: 0.01; filterBeta: 1000;'); // Додано UI для помилок/завантаження
-            scene.setAttribute('embedded', '');
             scene.setAttribute('color-space', 'sRGB');
-            scene.setAttribute('renderer', 'antialias: true');
+            scene.setAttribute('renderer', 'antialias: true, colorManagement: true, physicallyCorrectLights: true'); // Виправлено: додано colorManagement та physicallyCorrectLights
             scene.setAttribute('vr-mode-ui', 'enabled: false');
             scene.setAttribute('device-orientation-permission-ui', 'enabled: false');
+            // Видалено 'embedded': '' — може конфліктувати з AR камерою
             // Камера
             const camera = document.createElement('a-entity');
             camera.setAttribute('camera', '');
