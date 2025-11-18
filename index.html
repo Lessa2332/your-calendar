@@ -236,11 +236,16 @@
                 this.scene.addEventListener('mindar-image-targetLost', (e) => {
                     console.log('Target lost:', e.detail.index);
                 });
-                // Додано: Авто-start після loaded (опціонально, для тестів)
+                // Додано: Обробка помилок AR
+                this.scene.addEventListener('arError', (e) => {
+                    console.error('AR Error:', e.detail);
+                    document.getElementById('processing-info').textContent = "❌ AR Error: " + (e.detail || 'Camera failed. Check permissions.');
+                });
+                // Додано: Авто-start після loaded (опціонально, для тестів — розкоментуйте)
                 // setTimeout(() => this.autoStartAR(), 2000);
             }
             autoStartAR() { // Розкоментуйте для авто-старту
-                const mindarComp = this.scene.components['mindar-image'];
+                const mindarComp = this.scene.components.mindarImage;
                 if (mindarComp && typeof mindarComp.start === 'function') {
                     mindarComp.start();
                     document.getElementById('instructions').classList.add('hidden');
@@ -305,7 +310,7 @@
                     document.getElementById('instructions').classList.add('hidden');
                     document.getElementById('puzzle-board').setAttribute('visible', 'true');
                     this.gridSlots.forEach(slot => slot.element.setAttribute('visible', 'true'));
-                    const mindarComp = this.scene.components['mindar-image'];
+                    const mindarComp = this.scene.components.mindarImage;  // Виправлено: mindarImage без дефісу
                     if (mindarComp && typeof mindarComp.start === 'function') {
                         console.log('Starting MindAR...');
                         mindarComp.start();
@@ -470,9 +475,9 @@
                     slot.element.setAttribute('visible', 'false');
                 });
                 document.getElementById('processing-info').textContent = "🔍 Point at one of 12 trained calendar images";
-                const mindarComp = this.scene.components['mindar-image'];
+                const mindarComp = this.scene.components.mindarImage;  // Виправлено: mindarImage без дефісу
                 if (mindarComp && typeof mindarComp.stop === 'function') {
-                    mindarComp.stop(); // Зупинити AR для reset
+                    mindarComp.stop();  // Зупинити AR для reset
                 }
             }
         }
