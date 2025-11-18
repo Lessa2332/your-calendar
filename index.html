@@ -4,35 +4,35 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <title>Магічний пазл для зірочки</title>
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@2.2.1/dist/mindar-image-aframe.prod.js"></script>
+  <!-- Стабільна комбо: A-Frame 1.2.0 + MindAR 1.1.4 (офіційний приклад) -->
+  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.4/dist/mindar-image.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.1.4/dist/mindar-image-aframe.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-
   <style>
-    body,html{margin:0;height:100%;overflow:hidden;background:#000}
-    #hint{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#ff1493;color:#fff;padding:16px 32px;border-radius:50px;font-size:24px;z-index:999;font-family:"Comic Sans MS",sans-serif;box-shadow:0 0 30px #ff1493}
-    #win{position:fixed;inset:0;background:rgba(0,0,0,0.97);color:gold;font-size:80px;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:1000}
+    body,html{margin:0;height:100%;overflow:hidden;background:#000;font-family:"Comic Sans MS",sans-serif}
+    #hint{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:hotpink;color:#fff;padding:16px 32px;border-radius:50px;font-size:24px;z-index:999;box-shadow:0 0 30px hotpink}
+    #win{position:fixed;inset:0;background:rgba(0,0,0,0.97);color:gold;font-size:80px;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:1000;text-align:center}
     #win span{animation:bounce 1s infinite}
     @keyframes bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
   </style>
 </head>
 <body>
 
-<div id="hint">Покажи маркер — і почнеться магія!</div>
+<div id="hint">Наведи камеру на маркер — почнеться магія! 🌟</div>
 <div id="win"><span>УРААА!</span><br>Ти найкращий чарівник!</div>
 
 <a-scene
   embedded
-  mindar-image="imageTargetSrc: calendar.mind; uiLoading:no; uiError:no; uiScanning:no; autoStart: false"
-  renderer="colorManagement:true; physicallyCorrectLights:true"
-  vr-mode-ui="enabled:false"
-  device-orientation-permission-ui="enabled:false">
+  mindar-image="imageTargetSrc: calendar.mind; uiLoading: no; uiError: no; uiScanning: no;"
+  color-space="sRGB"
+  renderer="colorManagement: true, physicallyCorrectLights: true"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false">
 
-  <!-- Додаємо курсор для кращої взаємодії -->
-  <a-entity cursor="rayOrigin: mouse" raycaster="objects: .piece"></a-entity>
-  <a-camera></a-camera>
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-  <a-entity mindar-image-target="targetIndex:0">
+  <a-entity mindar-image-target="targetIndex: 0">
     <a-entity id="puzzle"></a-entity>
   </a-entity>
 
@@ -41,62 +41,24 @@
 <audio id="yay" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3" preload="auto"></audio>
 
 <script>
-// Надійний спосіб запуску MindAR
-function startMindAR() {
-  const sceneEl = document.querySelector('a-scene');
-  const mindarSystem = sceneEl.components['mindar-image-system'];
-  
-  if (mindarSystem && typeof mindarSystem.start === 'function') {
-    console.log('Starting MindAR...');
-    mindarSystem.start();
-  } else {
-    console.log('MindAR not ready, retrying...');
-    setTimeout(startMindAR, 500);
-  }
-}
+  // Правильний запуск MindAR після повного завантаження (без ретраїв)
+  document.querySelector('a-scene').addEventListener('loaded', async () => {
+    const sceneEl = document.querySelector('a-scene');
+    const mindar = sceneEl.components['mindar-image-system'];
+    await mindar.start(); // Офіційний метод з прикладу MindAR
+    console.log('MindAR started successfully!'); // Для перевірки в консолі
+  });
 
-// Запускаємо після повного завантаження сцени
-document.querySelector('a-scene').addEventListener('loaded', function() {
-  console.log('A-Frame scene loaded');
-  setTimeout(startMindAR, 1000);
-});
+  // Створюємо пазл тільки коли маркер знайдено (один раз)
+  let puzzleCreated = false;
+  document.querySelector('a-scene').addEventListener('targetFound', () => {
+    if (!puzzleCreated) {
+      puzzleCreated = true;
+      setTimeout(createPuzzle, 500); // Невелика затримка для стабільності
+    }
+  });
 
-// Альтернативно: запуск після завантаження сторінки
-window.addEventListener('load', function() {
-  console.log('Page fully loaded');
-  setTimeout(startMindAR, 1500);
-});
-
-// Коли маркер знайдено — створюємо пазл (один раз)
-let puzzleCreated = false;
-let clickHandler = null;
-
-document.querySelector('a-scene').addEventListener('targetFound', () => {
-  console.log('Marker found!');
-  if (!puzzleCreated) {
-    puzzleCreated = true;
-    setTimeout(createPuzzle, 600);
-  }
-});
-
-// Очищаємо при втраті маркера
-document.querySelector('a-scene').addEventListener('targetLost', () => {
-  console.log('Marker lost');
-  const puzzle = document.getElementById('puzzle');
-  puzzle.innerHTML = '';
-  puzzleCreated = false;
-  
-  // Видаляємо старий обробник кліків
-  if (clickHandler) {
-    document.querySelector('a-scene').removeEventListener('click', clickHandler);
-    clickHandler = null;
-  }
-});
-
-async function createPuzzle() {
-  console.log('Creating puzzle...');
-  
-  try {
+  async function createPuzzle() {
     const img = new Image();
     img.src = 'images/01.jpg?t=' + Date.now();
     await img.decode();
@@ -119,7 +81,7 @@ async function createPuzzle() {
         plane.setAttribute('src', canvas.toDataURL());
         plane.setAttribute('width', scaleW * 2);
         plane.setAttribute('height', scaleH * 2);
-        plane.setAttribute('position', `${(Math.random()-0.5)*1.4} ${(Math.random()-0.5)*1.4} 0.02`);
+        plane.setAttribute('position', `${(Math.random() - 0.5) * 1.4} ${(Math.random() - 0.5) * 1.4} 0.02`);
         plane.setAttribute('data-target-x', (col - 1) * scaleW);
         plane.setAttribute('data-target-y', (1 - row) * scaleH);
         plane.classList.add('piece', 'raycastable');
@@ -128,11 +90,9 @@ async function createPuzzle() {
       }
     }
 
-    console.log('Puzzle created with', pieces.length, 'pieces');
-
-    // Клік по шматочку - зберігаємо обробник для майбутнього видалення
-    clickHandler = e => {
-      const piece = e.detail.intersectedEl;
+    // Клік по шматочку (дитячий підхід: міняємо місцями з випадковим)
+    document.querySelector('a-scene').addEventListener('click', e => {
+      const piece = e.detail.intersectedEls?.[0];
       if (!piece || !piece.classList.contains('piece')) return;
 
       const other = pieces.filter(p => p !== piece)[Math.floor(Math.random() * 8)];
@@ -140,29 +100,21 @@ async function createPuzzle() {
       piece.setAttribute('position', other.getAttribute('position'));
       other.setAttribute('position', tmp);
 
-      // Перемога?
+      // Перевірка перемоги (з толерантністю для легкості)
       if (pieces.every(p => {
         const pos = p.getAttribute('position');
-        const tx = parseFloat(p.getAttribute('data-target-x'));
-        const ty = parseFloat(p.getAttribute('data-target-y'));
-        return Math.abs(pos.x - tx) < 0.07 && Math.abs(pos.y - ty) < 0.07;
+        const tx = parseFloat(p.dataset.targetX);
+        const ty = parseFloat(p.dataset.targetY);
+        return Math.abs(pos.x - tx) < 0.08 && Math.abs(pos.y - ty) < 0.08;
       })) {
         document.getElementById('win').style.display = 'flex';
         document.getElementById('yay').play();
-        confetti({particleCount: 600, spread: 120, origin: {y: 0.6}});
-        
-        // Видаляємо обробник після перемоги
-        document.querySelector('a-scene').removeEventListener('click', clickHandler);
-        clickHandler = null;
+        confetti({ particleCount: 600, spread: 120, origin: { y: 0.6 } });
       }
-    };
-
-    document.querySelector('a-scene').addEventListener('click', clickHandler);
-    
-  } catch (error) {
-    console.error('Error creating puzzle:', error);
+    });
   }
-}
 </script>
 </body>
 </html>
+</html>
+
