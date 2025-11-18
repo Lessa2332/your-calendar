@@ -209,6 +209,7 @@
                 this.currentTargetIndex = null;
                 this.imageSplitter = new ImageSplitter();
                 this.numTargets = 12; // Кількість targets з calendar.mind — перевірте в генераторі MindAR
+                this.cameraReady = false; // Додано: флаг для готовності камери
                 this.init();
             }
             async init() {
@@ -228,6 +229,16 @@
                     this.createGrid();
                     document.getElementById('loading-screen').style.display = 'none';
                     document.getElementById('processing-info').textContent = "✅ AR Ready! Tap Start & Allow Camera";
+
+                    // Додано: Чекаємо повної ініціалізації камери
+                    const camera = this.scene.querySelector('[camera]');
+                    if (camera) {
+                        camera.addEventListener('loaded', () => {
+                            console.log('Camera fully loaded');
+                            this.cameraReady = true;
+                        });
+                        camera.setAttribute('camera', 'active: true'); // Активуємо камеру явно
+                    }
                 });
                 this.scene.addEventListener('mindar-image-targetFound', (e) => {
                     console.log('Target found:', e.detail.index);
@@ -313,11 +324,23 @@
                     const mindarSystem = this.scene.systems['mindar-image-system'];  // Виправлено: systems['mindar-image-system']
                     if (mindarSystem && typeof mindarSystem.start === 'function') {
                         console.log('Starting MindAR...');
-                        // Додано затримку для ініціалізації object3D
-                        setTimeout(() => {
+                        // Чекаємо камеру або fallback затримку
+                        if (this.cameraReady) {
                             mindarSystem.start();
                             document.getElementById('processing-info').textContent = "📱 Allow camera & point at calendar (one of 12 trained images)";
-                        }, 500);
+                        } else {
+                            // Затримка, поки камера завантажиться
+                            setTimeout(() => {
+                                const camera = this.scene.querySelector('[camera]');
+                                if (camera && camera.components && camera.components.camera) {
+                                    mindarSystem.start();
+                                    document.getElementById('processing-info').textContent = "📱 Allow camera & point at calendar (one of 12 trained images)";
+                                } else {
+                                    console.error('Camera not ready after delay');
+                                    document.getElementById('processing-info').textContent = "❌ Camera init failed. Reload.";
+                                }
+                            }, 1000); // Збільшено до 1с
+                        }
                     } else {
                         console.error('MindAR start failed');
                         document.getElementById('processing-info').textContent = "❌ MindAR start failed. Reload page.";
@@ -500,7 +523,7 @@
             // Видалено 'embedded': '' — може конфліктувати з AR камерою
             // Камера
             const camera = document.createElement('a-entity');
-            camera.setAttribute('camera', '');
+            camera.setAttribute('camera', 'active: true'); // Додано: явно активувати камеру
             scene.appendChild(camera);
             // Контейнери
             const puzzleTargets = document.createElement('a-entity');
