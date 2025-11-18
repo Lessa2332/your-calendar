@@ -24,14 +24,20 @@
     <div style="font-size:55px;margin-top:20px">Ти справжній маг!</div>
   </div>
 
-  <a-scene embedded mindar-image="imageTargetSrc: calendar.mind"
-           renderer="physicallyCorrectLights: true"
-           vr-mode-ui="enabled: false"
-           device-orientation-permission-ui="enabled: false">
+  <a-scene 
+    embedded 
+    mindar-image="imageTargetSrc: calendar.mind;"
+    renderer="colorManagement: true; physicallyCorrectLights: true"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
 
-    <a-entity camera></a-entity>
+    <!-- Додаємо курсор для кліків -->
+    <a-entity cursor="rayOrigin: mouse" raycaster="objects: .piece"></a-entity>
+    
+    <a-entity camera position="0 0 0"></a-entity>
+    
     <a-entity mindar-image-target="targetIndex: 0">
-      <a-entity id="puzzle"></a-entity>
+      <a-entity id="puzzle" init-puzzle></a-entity>
     </a-entity>
   </a-scene>
 
@@ -39,11 +45,23 @@
 
   <script>
     AFRAME.registerComponent('init-puzzle', {
-      init: async function () {
-        await new Promise(r => setTimeout(r, 1500)); // чекаємо стабільний трекінг
+      init: function () {
+        const el = this.el;
+        
+        // Чекаємо на завантаження AR
+        el.sceneEl.addEventListener('targetFound', async () => {
+          await new Promise(r => setTimeout(r, 1000));
+          this.createPuzzle();
+        });
+      },
 
+      createPuzzle: async function () {
         const img = new Image();
-        img.src = 'images/01.jpg?t=' + Date.now();
+        img.crossOrigin = "anonymous";
+        
+        // Використовуємо зображення з папки images
+        img.src = 'images/01.jpg?' + Date.now();
+        
         await img.decode();
 
         const pw = img.width/3, ph = img.height/3;
@@ -53,7 +71,8 @@
         for (let row=0; row<3; row++) {
           for (let col=0; col<3; col++) {
             const canvas = document.createElement('canvas');
-            canvas.width = pw; canvas.height = ph;
+            canvas.width = pw; 
+            canvas.height = ph;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, col*pw, row*ph, pw, ph, 0, 0, pw, ph);
 
@@ -63,39 +82,45 @@
             plane.setAttribute('height', sh*2);
             plane.setAttribute('position', `${(Math.random()-0.5)*1.5} ${(Math.random()-0.5)*1.5} 0.02`);
             plane.setAttribute('data-target', `${(col-1)*sw} ${(1-row)*sh}`);
-            plane.className = "piece raycastable";
+            plane.classList.add("piece", "raycastable");
             this.el.appendChild(plane);
             pieces.push(plane);
           }
         }
 
-        // клік = магія
-        this.el.sceneEl.addEventListener('click', e => {
-          if (!e.detail.cursorEl || !e.detail.cursorEl.components.raycaster) return;
-          const clicked = e.detail.intersection?.object?.el;
-          if (!clicked || !clicked.classList.contains('piece')) return;
+        // Обробник кліків
+        this.el.sceneEl.addEventListener('click', (e) => {
+          const clickedEl = e.detail.intersection?.object?.el;
+          if (!clickedEl || !clickedEl.classList.contains('piece')) return;
 
-          const other = pieces.filter(p => p !== clicked)[Math.floor(Math.random()*8)];
-          const tmp = clicked.getAttribute('position');
-          clicked.setAttribute('position', other.getAttribute('position'));
-          other.setAttribute('position', tmp);
+          const otherPieces = pieces.filter(p => p !== clickedEl);
+          const other = otherPieces[Math.floor(Math.random() * otherPieces.length)];
+          
+          const clickedPos = clickedEl.getAttribute('position');
+          const otherPos = other.getAttribute('position');
+          
+          clickedEl.setAttribute('position', otherPos);
+          other.setAttribute('position', clickedPos);
 
-          // перевірка перемоги
-          if (pieces.every(p => {
-            const pos = p.getAttribute('position');
-            const [tx, ty] = p.getAttribute('data-target').split(' ').map(Number);
-            return Math.abs(pos.x-tx)<0.08 && Math.abs(pos.y-ty)<0.08;
-          })) {
-            document.getElementById('win').style.display = 'flex';
-            document.getElementById('sound').play();
-            confetti({particleCount:400, spread:100, origin:{y:0.6}});
-          }
+          // Перевірка перемоги
+          this.checkWin(pieces);
         });
+      },
+
+      checkWin: function(pieces) {
+        const allCorrect = pieces.every(p => {
+          const pos = p.getAttribute('position');
+          const [tx, ty] = p.getAttribute('data-target').split(' ').map(Number);
+          return Math.abs(pos.x - tx) < 0.08 && Math.abs(pos.y - ty) < 0.08;
+        });
+
+        if (allCorrect) {
+          document.getElementById('win').style.display = 'flex';
+          document.getElementById('sound').play();
+          confetti({particleCount:400, spread:100, origin:{y:0.6}});
+        }
       }
     });
-
-    // запускаємо компонент на маркері
-    document.querySelector('a-entity[mindar-image-target]').setAttribute('init-puzzle', '');
   </script>
 </body>
 </html>
