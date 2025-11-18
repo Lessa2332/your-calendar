@@ -30,7 +30,7 @@
 
   <!-- MindAR сена з маркером у корені -->
   <a-scene embedded mindar-image="imageTargetSrc: calendar.mind; filterMinCF:0.0001; filterBeta:1000;"
-           renderer="colorManagement:true" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
+           renderer="colorManagement:true; physicallyCorrectLights: true" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
 
     <a-entity camera></a-entity>
 
@@ -81,10 +81,10 @@
           const correctY = (1 - y) * scaleH;
           plane.setAttribute('data-correct', `${correctX} ${correctY}`);
 
-          // Початкова випадкова позиція
+          // Початкова випадкова позиція (ВИПРАВЛЕНО: прибрано "job")
           const randX = (Math.random() - 0.5) * 1.3;
           const randY = (Math.random() - 0.5) * 1.3;
-          plane.setAttribute('position', `${randX} ${randY job} 0.01`);
+          plane.setAttribute('position', `${randX} ${randY} 0.01`);
           
           plane.classList.add('piece', 'clickable');
           container.appendChild(plane);
@@ -121,5 +121,5 @@
   </script>
 </body>
 </html>
-</html>
+
 
