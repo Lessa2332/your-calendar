@@ -2,124 +2,100 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Дитячий AR-пазл 3×3</title>
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@2.2.0/dist/mindar-image-aframe.prod.js"></script>
+  <title>Магічний пазл для моєї зірочки</title>
+  <!-- Нова версія A-Frame + MindAR, де вже виправлено useLegacyLights -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@2.2.1/dist/mindar-image-aframe.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
   <style>
-    body { margin:0; overflow:hidden; font-family:"Comic Sans MS",cursive,sans-serif; }
-    .hint {
-      position:absolute; top:10px; left:0; right:0; text-align:center;
-      font-size:26px; color:#fff; background:rgba(0,0,0,0.6); padding:12px; border-radius:20px;
-      z-index:100;
-    }
-    .win {
-      position:absolute; inset:0; background:rgba(0,0,0,0.95);
-      color:gold; font-size:80px; display:none; align-items:center;
-      justify-content:center; flex-direction:column; z-index:200;
-    }
-    .win span { animation:bounce 1.2s infinite; }
-    @keyframes bounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
+    body{margin:0;overflow:hidden;background:#000;font-family:"Comic Sans MS",sans-serif}
+    .hint{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:rgba(255,20,180,0.9);color:#fff;padding:15px 30px;border-radius:40px;font-size:26px;z-index:999;box-shadow:0 0 30px hotpink}
+    .win{position:fixed;inset:0;background:rgba(0,0,0,0.97);color:#fff;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:1000;font-size:80px}
+    .win span{animation:pulse 1.4s infinite}
+    @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.5)}}
   </style>
 </head>
 <body>
 
-  <div class="hint">Наведи камеру на маркер</div>
+  <div class="hint">Покажи маркер — і почнеться чарівництво!</div>
   <div class="win" id="win">
-    <span>УРА!</span><br>ТИ ЗІБРАВ ПАЗЛ!
+    <div><span>УРААА!</span></div>
+    <div style="font-size:55px;margin-top:20px">Ти справжній маг!</div>
   </div>
 
-  <!-- MindAR сена з маркером у корені -->
-  <a-scene embedded mindar-image="imageTargetSrc: calendar.mind; filterMinCF:0.0001; filterBeta:1000;"
-           renderer="colorManagement:true; physicallyCorrectLights: true" vr-mode-ui="enabled:false" device-orientation-permission-ui="enabled:false">
+  <a-scene embedded mindar-image="imageTargetSrc: calendar.mind"
+           renderer="physicallyCorrectLights: true"
+           vr-mode-ui="enabled: false"
+           device-orientation-permission-ui="enabled: false">
 
     <a-entity camera></a-entity>
-
-    <!-- Пазл з’явиться тут -->
-    <a-entity mindar-image-target="targetIndex:0">
-      <a-entity id="puzzle-container"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity id="puzzle"></a-entity>
     </a-entity>
-
   </a-scene>
 
+  <audio id="sound" src="https://assets.mixkit.co/sfx/preview/mixkit-magical-coin-win-1937.mp3" preload="auto"></audio>
+
   <script>
-    document.querySelector('a-scene').addEventListener('arReady', () => {
-      setTimeout(createPuzzle, 1200); // трохи почекаємо стабільного трекінгу
+    AFRAME.registerComponent('init-puzzle', {
+      init: async function () {
+        await new Promise(r => setTimeout(r, 1500)); // чекаємо стабільний трекінг
+
+        const img = new Image();
+        img.src = 'images/01.jpg?t=' + Date.now();
+        await img.decode();
+
+        const pw = img.width/3, ph = img.height/3;
+        const sw = 0.5/3, sh = (img.height/img.width)*0.5/3;
+        const pieces = [];
+
+        for (let row=0; row<3; row++) {
+          for (let col=0; col<3; col++) {
+            const canvas = document.createElement('canvas');
+            canvas.width = pw; canvas.height = ph;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, col*pw, row*ph, pw, ph, 0, 0, pw, ph);
+
+            const plane = document.createElement('a-plane');
+            plane.setAttribute('src', canvas.toDataURL());
+            plane.setAttribute('width', sw*2);
+            plane.setAttribute('height', sh*2);
+            plane.setAttribute('position', `${(Math.random()-0.5)*1.5} ${(Math.random()-0.5)*1.5} 0.02`);
+            plane.setAttribute('data-target', `${(col-1)*sw} ${(1-row)*sh}`);
+            plane.className = "piece raycastable";
+            this.el.appendChild(plane);
+            pieces.push(plane);
+          }
+        }
+
+        // клік = магія
+        this.el.sceneEl.addEventListener('click', e => {
+          if (!e.detail.cursorEl || !e.detail.cursorEl.components.raycaster) return;
+          const clicked = e.detail.intersection?.object?.el;
+          if (!clicked || !clicked.classList.contains('piece')) return;
+
+          const other = pieces.filter(p => p !== clicked)[Math.floor(Math.random()*8)];
+          const tmp = clicked.getAttribute('position');
+          clicked.setAttribute('position', other.getAttribute('position'));
+          other.setAttribute('position', tmp);
+
+          // перевірка перемоги
+          if (pieces.every(p => {
+            const pos = p.getAttribute('position');
+            const [tx, ty] = p.getAttribute('data-target').split(' ').map(Number);
+            return Math.abs(pos.x-tx)<0.08 && Math.abs(pos.y-ty)<0.08;
+          })) {
+            document.getElementById('win').style.display = 'flex';
+            document.getElementById('sound').play();
+            confetti({particleCount:400, spread:100, origin:{y:0.6}});
+          }
+        });
+      }
     });
 
-    async function createPuzzle() {
-      const container = document.getElementById('puzzle-container');
-      
-      // Завантажуємо ціле фото з папки images
-      const img = new Image();
-      img.src = 'images/01.jpg?' + Date.now(); // ?+timestamp щоб не кешувалося
-      await img.decode();
-
-      const pieceW = img.width / 3;
-      const pieceH = img.height / 3;
-      const scaleW = 0.5 / 3;   // весь пазл шириною 0.5 м
-      const scaleH = (img.height / img.width) * 0.5 / 3;
-
-      const pieces = [];
-
-      for (let y = 0; y < 3; y++) {
-        for (let x = 0; x < 3; x++) {
-          // Ріжемо шматочок на canvas
-          const canvas = document.createElement('canvas');
-          canvas.width = pieceW;
-          canvas.height = pieceH;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, x*pieceW, y*pieceH, pieceW, pieceH, 0, 0, pieceW, pieceH);
-
-          // Створюємо a-plane з текстурою
-          const plane = document.createElement('a-plane');
-          plane.setAttribute('src', canvas.toDataURL());
-          plane.setAttribute('width', scaleW * 2);
-          plane.setAttribute('height', scaleH * 2);
-          
-          // Правильна позиція
-          const correctX = (x - 1) * scaleW;
-          const correctY = (1 - y) * scaleH;
-          plane.setAttribute('data-correct', `${correctX} ${correctY}`);
-
-          // Початкова випадкова позиція (ВИПРАВЛЕНО: прибрано "job")
-          const randX = (Math.random() - 0.5) * 1.3;
-          const randY = (Math.random() - 0.5) * 1.3;
-          plane.setAttribute('position', `${randX} ${randY} 0.01`);
-          
-          plane.classList.add('piece', 'clickable');
-          container.appendChild(plane);
-          pieces.push(plane);
-        }
-      }
-
-      // Клік — міняємо місцями з випадковим шматочком
-      document.querySelectorAll('.piece').forEach(p => {
-        p.addEventListener('click', () => {
-          const others = pieces.filter(el => el !== p);
-          const swap = others[Math.floor(Math.random() * others.length)];
-
-          const temp = p.getAttribute('position');
-          p.setAttribute('position', swap.getAttribute('position'));
-          swap.setAttribute('position', temp);
-
-          checkWin();
-        });
-      });
-
-      function checkWin() {
-        let correct = 0;
-        pieces.forEach(p => {
-          const pos = p.getAttribute('position');
-          const [targetX, targetY] = p.getAttribute('data-correct').split(' ').map(parseFloat);
-          if (Math.abs(pos.x - targetX) < 0.06 && Math.abs(pos.y - targetY) < 0.06) correct++;
-        });
-        if (correct === 9) {
-          document.getElementById('win').style.display = 'flex';
-        }
-      }
-    }
+    // запускаємо компонент на маркері
+    document.querySelector('a-entity[mindar-image-target]').setAttribute('init-puzzle', '');
   </script>
 </body>
 </html>
-
-
