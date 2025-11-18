@@ -217,9 +217,9 @@
                 this.setupDragAndDrop();
                 this.scene.addEventListener('loaded', () => {
                     console.log('A-Frame scene loaded');
-                    const mindarComp = this.scene.components['mindar-image'];
-                    if (!mindarComp) {
-                        console.error('MindAR not initialized');
+                    const mindarSystem = this.scene.systems['mindar-image-system'];
+                    if (!mindarSystem) {
+                        console.error('MindAR system not initialized');
                         document.getElementById('processing-info').textContent = "❌ AR failed to initialize. Check console.";
                         return;
                     }
@@ -245,9 +245,9 @@
                 // setTimeout(() => this.autoStartAR(), 2000);
             }
             autoStartAR() { // Розкоментуйте для авто-старту
-                const mindarComp = this.scene.components.mindarImage;
-                if (mindarComp && typeof mindarComp.start === 'function') {
-                    mindarComp.start();
+                const mindarSystem = this.scene.systems['mindar-image-system'];
+                if (mindarSystem && typeof mindarSystem.start === 'function') {
+                    mindarSystem.start();
                     document.getElementById('instructions').classList.add('hidden');
                     document.getElementById('puzzle-board').setAttribute('visible', 'true');
                     this.gridSlots.forEach(slot => slot.element.setAttribute('visible', 'true'));
@@ -310,10 +310,10 @@
                     document.getElementById('instructions').classList.add('hidden');
                     document.getElementById('puzzle-board').setAttribute('visible', 'true');
                     this.gridSlots.forEach(slot => slot.element.setAttribute('visible', 'true'));
-                    const mindarComp = this.scene.components.mindarImage;  // Виправлено: mindarImage без дефісу
-                    if (mindarComp && typeof mindarComp.start === 'function') {
+                    const mindarSystem = this.scene.systems['mindar-image-system'];  // Виправлено: systems['mindar-image-system']
+                    if (mindarSystem && typeof mindarSystem.start === 'function') {
                         console.log('Starting MindAR...');
-                        mindarComp.start();
+                        mindarSystem.start();
                         document.getElementById('processing-info').textContent = "📱 Allow camera & point at calendar (one of 12 trained images)";
                     } else {
                         console.error('MindAR start failed');
@@ -475,15 +475,15 @@
                     slot.element.setAttribute('visible', 'false');
                 });
                 document.getElementById('processing-info').textContent = "🔍 Point at one of 12 trained calendar images";
-                const mindarComp = this.scene.components.mindarImage;  // Виправлено: mindarImage без дефісу
-                if (mindarComp && typeof mindarComp.stop === 'function') {
-                    mindarComp.stop();  // Зупинити AR для reset
+                const mindarSystem = this.scene.systems['mindar-image-system'];  // Виправлено: systems['mindar-image-system']
+                if (mindarSystem && typeof mindarSystem.stop === 'function') {
+                    mindarSystem.stop();  // Зупинити AR для reset
                 }
             }
         }
         // 🔥 КРИТИЧНО: створюємо сцену лише після завантаження A-Frame і MindAR
         function initARScene() {
-            if (typeof AFRAME === 'undefined' || !AFRAME.components['mindar-image']) {
+            if (typeof AFRAME === 'undefined' || !AFRAME.systems['mindar-image-system']) {
                 setTimeout(initARScene, 100);
                 return;
             }
