@@ -3,12 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <!-- CSP для GitHub Pages -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob: https://aframe.io https://cdn.jsdelivr.net https://assets.mixkit.co; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://aframe.io https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
   <title>Магічний пазл для зірочки</title>
   
-  <!-- A-Frame 1.7.0 + MindAR 2.2.1 -->
-  <script src="https://aframe.io/releases/1.7.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@2.2.1/dist/mindar-image-aframe.prod.js"></script>
+  <!-- CSP-safe скрипти -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.7.0/dist/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mindar@2.2.1/dist/mindar-image-aframe.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
   <style>
@@ -89,7 +90,7 @@ function createTargets() {
 // Запускаємо AR лише після кліку користувача
 function startAR() {
   const scene = document.querySelector('a-scene');
-  const mindarComponent = scene.systems['mindar-image-system'];
+  const mindarComponent = scene.systems['mindar-image']; // ✅ Правильна назва
   if (mindarComponent && !mindarComponent.initialized) {
     mindarComponent.start().catch(err => {
       console.error('AR start failed:', err);
@@ -133,7 +134,7 @@ function resetPuzzle() {
 
 async function createPuzzle(targetIndex) {
   const img = new Image();
-  img.crossOrigin = "anonymous";
+  // img.crossOrigin = "anonymous"; // ❌ Закоментовано для GitHub Pages
   img.src = `./images/${String(targetIndex + 1).padStart(2, '0')}.jpg?t=${Date.now()}`;
   
   await new Promise((resolve, reject) => {
@@ -157,7 +158,7 @@ async function createPuzzle(targetIndex) {
       ctx.drawImage(img, col * pieceW, row * pieceH, pieceW, pieceH, 0, 0, pieceW, pieceH);
 
       const plane = document.createElement('a-plane');
-      plane.setAttribute('src', canvas.toDataURL('image/jpeg', 0.92));
+      plane.setAttribute('src', canvas.toDataURL()); // ✅ Без формату
       plane.setAttribute('width', scaleW * 2);
       plane.setAttribute('height', scaleH * 2);
       plane.setAttribute('position', `${(Math.random() - 0.5) * 1.4} ${(Math.random() - 0.5) * 1.4} 0.02`);
