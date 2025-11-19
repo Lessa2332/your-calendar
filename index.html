@@ -3,11 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-  <!-- CSP для GitHub Pages -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-eval' 'unsafe-inline' data: blob: https://aframe.io https://cdn.jsdelivr.net https://assets.mixkit.co; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://aframe.io https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline';">
   <title>Магічний пазл для зірочки</title>
-  
-  <!-- CSP-safe скрипти -->
+
+  <!-- CSP-safe бібліотеки з jsDelivr (npm) -->
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.7.0/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mindar@2.2.1/dist/mindar-image-aframe.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
@@ -87,26 +85,24 @@ function createTargets() {
   }
 }
 
-// Запускаємо AR лише після кліку користувача
+// Запуск AR після кліку
 function startAR() {
   const scene = document.querySelector('a-scene');
-  const mindarComponent = scene.systems['mindar-image']; // ✅ Правильна назва
-  if (mindarComponent && !mindarComponent.initialized) {
-    mindarComponent.start().catch(err => {
+  const mindarSystem = scene.systems['mindar-image']; // ✅ Правильна назва
+  if (mindarSystem && !mindarSystem.initialized) {
+    mindarSystem.start().catch(err => {
       console.error('AR start failed:', err);
       document.getElementById('hint').textContent = '❌ Камера не доступна!';
     });
   }
 }
 
-// Обробка знайденого маркера
 let activeTargetIndex = null;
 let clickHandler = null;
 
 function onTargetFound(event) {
   const targetIndex = event.detail.targetIndex;
   if (activeTargetIndex === targetIndex) return;
-
   resetPuzzle();
   activeTargetIndex = targetIndex;
   setTimeout(() => createPuzzle(targetIndex), 500);
@@ -125,8 +121,8 @@ function resetPuzzle() {
     clickHandler = null;
   }
   for (let i = 0; i < 12; i++) {
-    const target = document.getElementById(`target-${i}`);
-    if (target) target.innerHTML = '';
+    const el = document.getElementById(`target-${i}`);
+    if (el) el.innerHTML = '';
   }
   activeTargetIndex = null;
   document.getElementById('win').style.display = 'none';
@@ -134,12 +130,14 @@ function resetPuzzle() {
 
 async function createPuzzle(targetIndex) {
   const img = new Image();
-  // img.crossOrigin = "anonymous"; // ❌ Закоментовано для GitHub Pages
+  // Без crossOrigin — не потрібно на GitHub Pages
   img.src = `./images/${String(targetIndex + 1).padStart(2, '0')}.jpg?t=${Date.now()}`;
-  
+
   await new Promise((resolve, reject) => {
     img.onload = resolve;
-    img.onerror = reject;
+    img.onerror = () => {
+      reject(new Error(`Failed to load image for day ${targetIndex + 1}`));
+    };
   });
 
   const pieceW = img.width / 3;
@@ -147,8 +145,9 @@ async function createPuzzle(targetIndex) {
   const scaleW = 0.5 / 3;
   const scaleH = (img.height / img.width) * 0.5 / 3;
   const pieces = [];
-  const targetContainer = document.getElementById(`target-${targetIndex}`);
+  const container = document.getElementById(`target-${targetIndex}`);
 
+  // Створення шматочків
   for (let row = 0; row < 3; row++) {
     for (let col = 0; col < 3; col++) {
       const canvas = document.createElement('canvas');
@@ -158,14 +157,14 @@ async function createPuzzle(targetIndex) {
       ctx.drawImage(img, col * pieceW, row * pieceH, pieceW, pieceH, 0, 0, pieceW, pieceH);
 
       const plane = document.createElement('a-plane');
-      plane.setAttribute('src', canvas.toDataURL()); // ✅ Без формату
+      plane.setAttribute('src', canvas.toDataURL()); // без формату — безпечніше
       plane.setAttribute('width', scaleW * 2);
       plane.setAttribute('height', scaleH * 2);
       plane.setAttribute('position', `${(Math.random() - 0.5) * 1.4} ${(Math.random() - 0.5) * 1.4} 0.02`);
       plane.setAttribute('data-target-x', (col - 1) * scaleW);
       plane.setAttribute('data-target-y', (1 - row) * scaleH);
       plane.classList.add('piece');
-      targetContainer.appendChild(plane);
+      container.appendChild(plane);
       pieces.push(plane);
     }
   }
@@ -193,7 +192,6 @@ async function createPuzzle(targetIndex) {
     piece.setAttribute('position', other.getAttribute('position'));
     other.setAttribute('position', tmp);
 
-    // Перевірка перемоги
     const isSolved = pieces.every(p => {
       const pos = p.getAttribute('position');
       const tx = parseFloat(p.getAttribute('data-target-x'));
@@ -203,7 +201,7 @@ async function createPuzzle(targetIndex) {
 
     if (isSolved) {
       document.getElementById('win').style.display = 'flex';
-      document.getElementById('yay').play();
+      document.getElementById('yay').play().catch(() => {});
       confetti({ particleCount: 600, spread: 120, origin: { y: 0.6 } });
       document.querySelector('a-scene').removeEventListener('click', clickHandler);
       clickHandler = null;
@@ -216,11 +214,9 @@ async function createPuzzle(targetIndex) {
 // Ініціалізація
 document.addEventListener('DOMContentLoaded', () => {
   createTargets();
-
   const scene = document.querySelector('a-scene');
   scene.addEventListener('targetFound', onTargetFound);
   scene.addEventListener('targetLost', onTargetLost);
-
   document.body.addEventListener('click', startAR, { once: true });
 });
 </script>
