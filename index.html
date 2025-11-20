@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <title>Магічне розфарбовування</title>
 
-  <!-- ЄДИНА 100% робоча пара 2025 року (без eval, без ORB/CORB) -->
+  <!-- ✅ ЄДИНА робоча комбінація 2025: mind-ar@1.2.5 (без eval) + npm A-Frame -->
   <script src="https://cdn.jsdelivr.net/npm/aframe@1.6.0/dist/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mindar-image-aframe@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
     body, html { margin:0; height:100%; overflow:hidden; background:#000; font-family:'Comic Sans MS',cursive,sans-serif; }
@@ -43,7 +43,7 @@
 
   <a-scene
     embedded
-    mindar-image="imageTargetSrc: ./calendar.mind; autoStart:false; uiLoading:no; uiError:no; uiScanning:no; filterMinCF:0.0001; filterBeta:1000"
+    mindar-image="imageTargetSrc: ./calendar.mind; autoStart:false; uiLoading:no; uiError:no; uiScanning:no; filterMinCF:0.0001; filterBeta:1000; warmupTolerance:5"
     renderer="colorManagement:true"
     vr-mode-ui="enabled:false"
     device-orientation-permission-ui="enabled:false">
@@ -76,7 +76,7 @@
     // === Запуск AR ===
     function startAR() {
       const scene = document.querySelector('a-scene');
-      const mindarSystem = scene.systems['mindar-image-system']; // правильна назва 2025
+      const mindarSystem = scene.systems['mindar-image-system']; // ✅ Правильно для mind-ar@1.2.5
       if (mindarSystem) mindarSystem.start();
       document.getElementById('hint').style.display = 'none';
     }
@@ -106,7 +106,10 @@
     async function loadImageAndSound(idx) {
       const img = new Image();
       img.src = `./images/${String(idx + 1).padStart(2, '0')}.jpg?t=${Date.now()}`;
-      await img.decode();
+      await new Promise((res, rej) => {
+        img.onload = res;
+        img.onerror = rej;
+      });
 
       // Звук (якщо є)
       try {
