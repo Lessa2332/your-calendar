@@ -63,160 +63,244 @@
 
     <a-camera active="true"></a-camera>
 
-    <!-- 12 СТАТИЧНИХ цілей — ЄДИНИЙ СПОСІБ, ЩО ПРАЦЮЄ НА 100% -->
-    <a-entity mindar-image-target="targetIndex: 0"  class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 1"  class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 2"  class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 3"  class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 4"  class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 5"  class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 6"  class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 7"  class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 8"  class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 9"  class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 10" class="target"></a-entity>
-    <a-entity mindar-image-target="targetIndex: 11" class="target"></a-entity>
+    <!-- 12 СТАТИЧНИХ цілей -->
+    <a-entity mindar-image-target="targetIndex: 0" class="target" id="target-0"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 1" class="target" id="target-1"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 2" class="target" id="target-2"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 3" class="target" id="target-3"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 4" class="target" id="target-4"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 5" class="target" id="target-5"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 6" class="target" id="target-6"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 7" class="target" id="target-7"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 8" class="target" id="target-8"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 9" class="target" id="target-9"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 10" class="target" id="target-10"></a-entity>
+    <a-entity mindar-image-target="targetIndex: 11" class="target" id="target-11"></a-entity>
 
   </a-scene>
 
   <script>
-    let currentColor = '#ff6961';
-    let brushSize = 15;
-    let scale = 1;
-    let canvas, ctx;
-    let isDrawing = false;
-    let lastPoint = null;
-    let activeIdx = null;
-    let audio = null;
+    // Чекаємо, поки A-Frame повністю завантажиться
+    document.addEventListener('DOMContentLoaded', function() {
+      let currentColor = '#ff6961';
+      let brushSize = 15;
+      let scale = 1;
+      let canvas, ctx;
+      let isDrawing = false;
+      let lastPoint = null;
+      let activeIdx = null;
+      let audio = null;
 
-    // Головний фокус: слухаємо на сцені, але з правильним форматом події!
-    document.querySelector('a-scene').addEventListener('targetFound', e => {
-      const idx = e.target.getAttribute('mindar-image-target').targetIndex;
-      if (activeIdx === idx) return;
-      clearAll();
-      activeIdx = idx;
-      loadContent(idx);
-      document.getElementById('hint').textContent = 'Малюй!';
-    });
+      // Реєструємо компонент для малювання
+      AFRAME.registerComponent('draw-handler', {
+        init: function () {
+          this.el.addEventListener('mousedown', () => {
+            isDrawing = true;
+            lastPoint = null;
+          });
+          this.el.addEventListener('mouseup', () => { 
+            isDrawing = false; 
+            lastPoint = null; 
+          });
+          this.el.addEventListener('mousemove', e => {
+            if (!isDrawing || !ctx || !canvas) return;
+            
+            const intersection = e.detail.intersection;
+            if (!intersection || !intersection.uv) return;
+            
+            const uv = intersection.uv;
+            const x = uv.x * canvas.width;
+            const y = (1 - uv.y) * canvas.height;
 
-    document.querySelector('a-scene').addEventListener('targetLost', e => {
-      const idx = e.target.getAttribute('mindar-image-target').targetIndex;
-      if (activeIdx === idx) clearAll();
-    });
-
-    function clearAll() {
-      document.querySelectorAll('a-plane.draw').forEach(p => p.remove());
-      if (audio) { audio.pause(); audio = null; }
-      canvas = ctx = null;
-      scale = 1;
-      activeIdx = null;
-      isDrawing = false;
-    }
-
-    async function loadContent(idx) {
-      const img = new Image();
-      img.onload = () => createDrawingPlane(img, idx);
-      img.onerror = () => createFallback(idx);
-      img.src = `images/${String(idx+1).padStart(2,'0')}.jpg?t=${Date.now()}`;
-
-      if (audio) audio.pause();
-      audio = new Audio(`fon/fon${idx+1}.mp3`);
-      audio.loop = true;
-      audio.play().catch(() => {});
-    }
-
-    function createDrawingPlane(img, idx) {
-      canvas = document.createElement('canvas');
-      canvas.width = 1024;
-      canvas.height = 1024 * img.height / img.width;
-      ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      const plane = document.createElement('a-plane');
-      plane.classList.add('draw');
-      plane.setAttribute('position', '0 0 0.01');
-      plane.setAttribute('width', 0.6);
-      plane.setAttribute('height', 0.6 * canvas.height / canvas.width);
-      plane.setAttribute('material', `src: ${canvas.toDataURL()}; transparent: true`);
-      plane.setAttribute('class', 'draw-surface');
-
-      document.querySelector(`a-entity[targetIndex="${idx}"]`).appendChild(plane);
-    }
-
-    function createFallback(idx) {
-      canvas = document.createElement('canvas');
-      canvas.width = 800; canvas.height = 600;
-      ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#333'; ctx.fillRect(0,0,800,600);
-      ctx.fillStyle = '#fff'; ctx.font = '80px Arial'; ctx.textAlign = 'center';
-      ctx.fillText('Малюй!', 400, 300);
-
-      const plane = document.createElement('a-plane');
-      plane.classList.add('draw');
-      plane.setAttribute('position', '0 0 0.01');
-      plane.setAttribute('width', 0.6); plane.setAttribute('height', 0.45);
-      plane.setAttribute('material', `src: ${canvas.toDataURL()}; transparent: true`);
-      document.querySelector(`a-entity[targetIndex="${idx}"]`).appendChild(plane);
-    }
-
-    // Малювання
-    AFRAME.registerComponent('draw-handler', {
-      init: function () {
-        this.el.addEventListener('mousedown', () => isDrawing = true);
-        this.el.addEventListener('mouseup', () => { isDrawing = false; lastPoint = null; });
-        this.el.addEventListener('mousemove', e => {
-          if (!isDrawing || !ctx) return;
-          const uv = e.detail.intersection.uv;
-          const x = uv.x * canvas.width;
-          const y = (1 - uv.y) * canvas.height;
-
-          if (lastPoint) {
-            ctx.strokeStyle = currentColor;
-            ctx.lineWidth = brushSize;
-            ctx.lineCap = 'round';
-            ctx.beginPath();
-            ctx.moveTo(lastPoint.x, lastPoint.y);
-            ctx.lineTo(x, y);
-            ctx.stroke();
-            e.target.setAttribute('material', 'src', canvas.toDataURL());
-          }
-          lastPoint = { x, y };
-        });
-      }
-    });
-
-    // Додаємо компонент до всіх площин
-    document.querySelectorAll('.draw-surface').forEach(el => el.setAttribute('draw-handler', ''));
-
-    // Кольори, розмір, зум
-    document.querySelectorAll('.color-btn').forEach(b => {
-      b.addEventListener('click', () => {
-        document.querySelector('.color-btn.active').classList.remove('active');
-        b.classList.add('active');
-        currentColor = b.dataset.color;
+            if (lastPoint) {
+              ctx.strokeStyle = currentColor;
+              ctx.lineWidth = brushSize;
+              ctx.lineCap = 'round';
+              ctx.lineJoin = 'round';
+              ctx.beginPath();
+              ctx.moveTo(lastPoint.x, lastPoint.y);
+              ctx.lineTo(x, y);
+              ctx.stroke();
+              
+              // Оновлюємо текстуру
+              this.el.setAttribute('material', 'src', canvas.toDataURL());
+            }
+            lastPoint = { x, y };
+          });
+        }
       });
-    });
 
-    document.getElementById('brushSize').addEventListener('input', e => {
-      brushSize = e.target.value;
-      document.getElementById('brushValue').textContent = brushSize;
-    });
+      // Обробники подій для цілей
+      document.querySelector('a-scene').addEventListener('targetFound', e => {
+        const target = e.target;
+        const targetAttr = target.getAttribute('mindar-image-target');
+        if (!targetAttr) return;
+        
+        const idx = targetAttr.targetIndex;
+        if (activeIdx === idx) return;
+        
+        clearAll();
+        activeIdx = idx;
+        loadContent(idx);
+        document.getElementById('hint').textContent = 'Малюй!';
+      });
 
-    window.zoomIn = () => { scale = Math.min(3, scale + 0.3); updateZoom(); };
-    window.zoomOut = () => { scale = Math.max(0.7, scale - 0.3); updateZoom(); };
-    function updateZoom() {
-      const plane = document.querySelector('a-plane.draw');
-      if (plane) {
-        plane.setAttribute('scale', `${scale} ${scale} 1`);
+      document.querySelector('a-scene').addEventListener('targetLost', e => {
+        const target = e.target;
+        const targetAttr = target.getAttribute('mindar-image-target');
+        if (!targetAttr) return;
+        
+        const idx = targetAttr.targetIndex;
+        if (activeIdx === idx) {
+          clearAll();
+        }
+      });
+
+      function clearAll() {
+        document.querySelectorAll('a-plane.draw').forEach(p => p.remove());
+        if (audio) { 
+          audio.pause(); 
+          audio = null; 
+        }
+        canvas = null;
+        ctx = null;
+        scale = 1;
+        activeIdx = null;
+        isDrawing = false;
+        lastPoint = null;
       }
-    }
 
-    // Старт після кліку (розблоковує аудіо + камеру)
-    document.body.addEventListener('click', () => {
-      document.getElementById('hint').textContent = 'Покажи маркер!';
-      const scene = document.querySelector('a-scene');
-      scene.systems['mindar-image-system'].start();
-    }, { once: true });
+      function loadContent(idx) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => createDrawingPlane(img, idx);
+        img.onerror = () => createFallback(idx);
+        
+        // ВИПРАВЛЕНІ ШЛЯХИ - відповідно до структури репозиторія
+        const imageNumber = String(idx + 1).padStart(2, '0');
+        img.src = `images/${imageNumber}.jpg?t=${Date.now()}`;
+
+        // Аудіо - виправлені шляхи
+        try {
+          if (audio) audio.pause();
+          audio = new Audio(`fon/${imageNumber}.mp3`);
+          audio.loop = true;
+          audio.play().catch(e => {
+            console.log('Аудіо не може бути відтворене:', e);
+          });
+        } catch (e) {
+          console.log('Помилка створення аудіо:', e);
+        }
+      }
+
+      function createDrawingPlane(img, idx) {
+        const targetElement = document.querySelector(`a-entity[targetIndex="${idx}"]`);
+        if (!targetElement) {
+          console.error(`Ціль з індексом ${idx} не знайдена`);
+          return;
+        }
+
+        // Очищаємо попередні елементи
+        targetElement.querySelectorAll('a-plane.draw').forEach(el => el.remove());
+
+        canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 1024 * (img.height / img.width);
+        ctx = canvas.getContext('2d');
+        
+        // Заповнюємо білим фоном
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Малюємо зображення
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const plane = document.createElement('a-plane');
+        plane.classList.add('draw', 'draw-surface');
+        plane.setAttribute('position', '0 0 0.01');
+        plane.setAttribute('width', '0.6');
+        plane.setAttribute('height', 0.6 * (canvas.height / canvas.width));
+        plane.setAttribute('material', {
+          src: canvas.toDataURL(),
+          transparent: true,
+          alphaTest: 0.5
+        });
+        plane.setAttribute('draw-handler', '');
+
+        targetElement.appendChild(plane);
+      }
+
+      function createFallback(idx) {
+        const targetElement = document.querySelector(`a-entity[targetIndex="${idx}"]`);
+        if (!targetElement) return;
+
+        canvas = document.createElement('canvas');
+        canvas.width = 800; 
+        canvas.height = 600;
+        ctx = canvas.getContext('2d');
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 800, 600);
+        ctx.fillStyle = '#333333'; 
+        ctx.font = '40px Arial'; 
+        ctx.textAlign = 'center';
+        ctx.fillText('Малюй тут!', 400, 300);
+
+        const plane = document.createElement('a-plane');
+        plane.classList.add('draw', 'draw-surface');
+        plane.setAttribute('position', '0 0 0.01');
+        plane.setAttribute('width', '0.6'); 
+        plane.setAttribute('height', '0.45');
+        plane.setAttribute('material', {
+          src: canvas.toDataURL(),
+          transparent: true,
+          alphaTest: 0.5
+        });
+        plane.setAttribute('draw-handler', '');
+
+        targetElement.appendChild(plane);
+      }
+
+      // Кольори, розмір, зум
+      document.querySelectorAll('.color-btn').forEach(b => {
+        b.addEventListener('click', () => {
+          document.querySelector('.color-btn.active').classList.remove('active');
+          b.classList.add('active');
+          currentColor = b.dataset.color;
+        });
+      });
+
+      document.getElementById('brushSize').addEventListener('input', e => {
+        brushSize = parseInt(e.target.value);
+        document.getElementById('brushValue').textContent = brushSize;
+      });
+
+      window.zoomIn = () => { 
+        scale = Math.min(3, scale + 0.3); 
+        updateZoom(); 
+      };
+      
+      window.zoomOut = () => { 
+        scale = Math.max(0.7, scale - 0.3); 
+        updateZoom(); 
+      };
+      
+      function updateZoom() {
+        const plane = document.querySelector('a-plane.draw');
+        if (plane) {
+          plane.setAttribute('scale', `${scale} ${scale} 1`);
+        }
+      }
+
+      // Старт після кліку
+      document.body.addEventListener('click', () => {
+        document.getElementById('hint').textContent = 'Покажи маркер!';
+        const scene = document.querySelector('a-scene');
+        if (scene && scene.systems['mindar-image-system']) {
+          scene.systems['mindar-image-system'].start();
+        }
+      }, { once: true });
+    });
   </script>
 </body>
 </html>
