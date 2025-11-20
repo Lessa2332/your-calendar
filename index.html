@@ -5,22 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Магічне розфарбовування</title>
 
-  <!-- ✅ ПРАВИЛЬНИЙ ПОРЯДОК -->
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
     * { 
       margin:0; padding:0; box-sizing:border-box; 
-      -webkit-tap-highlight-color: transparent; /* Видаляє синій highlight на тап */
-      -webkit-touch-callout: none; /* Вимикає меню на довгий тап */
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
     }
     
     body, html { 
       margin:0; height:100%; overflow:hidden; 
       background:#000; font-family:'Comic Sans MS',cursive,sans-serif;
-      touch-action: manipulation; /* Запобігає зуму на тап */
-      position: fixed; /* Фіксує скрол */
+      touch-action: manipulation;
+      position: fixed;
       width: 100%;
     }
     
@@ -87,58 +86,32 @@
       flex-shrink: 0;
     }
     
-    #cameraPreview {
-      position:fixed; top:0; left:0; width:100%; height:100%; 
-      object-fit:cover; z-index:0; display:none;
-    }
-    
-    /* Додаткові стилі для iOS */
     @supports (-webkit-touch-callout: none) {
       .controls {
         padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
       }
     }
     
-    /* Анімації для кращої взаємодії */
     .color-btn:active, .zoom-btn:active {
       transform: scale(0.95);
       transition: transform 0.1s;
     }
     
-    /* Адаптація для вертикальних екранів */
     @media (max-height: 700px) {
-      .controls {
-        padding: 8px 12px;
-        gap: 8px;
-      }
-      
-      .colors {
-        gap: 4px;
-      }
-      
-      #hint {
-        padding: 8px 16px;
-        font-size: clamp(14px, 3.5vw, 18px);
-      }
+      .controls { padding: 8px 12px; gap: 8px; }
+      .colors { gap: 4px; }
+      #hint { padding: 8px 16px; font-size: clamp(14px, 3.5vw, 18px); }
     }
     
-    /* Адаптація для дуже малих екранів */
     @media (max-width: 350px) {
-      .controls {
-        flex-direction: column;
-        gap: 8px;
-      }
-      
-      .colors {
-        order: 1;
-      }
+      .controls { flex-direction: column; gap: 8px; }
+      .colors { order: 1; }
     }
   </style>
 </head>
 <body>
 
-  <video id="cameraPreview" playsinline muted autoplay></video>
-  <div id="hint">Натисни екран → покажи маркер → малюй!</div>
+  <div id="hint">Покажи маркер камері → малюй! 🎨</div>
 
   <div class="controls">
     <div class="colors">
@@ -162,22 +135,14 @@
     </div>
   </div>
 
+  <!-- ✅ MindAR сам керує камерою -->
   <a-scene
-    embedded
-    mindar-image="imageTargetSrc: ./calendar.mind; autoStart:false; uiLoading:no; uiError:no; uiScanning:no; filterMinCF:0.0001; filterBeta:1000; warmupTolerance:5"
-    renderer="colorManagement:true; antialias: true;"
-    vr-mode-ui="enabled:false"
-    device-orientation-permission-ui="enabled:false"
-    xr-mode-ui="enabled: false">
-    
-    <a-camera 
-      active="false"
-      raycaster="objects: .draw-surface; far: 100"
-      cursor="fuse: false; rayOrigin: mouse"
-      wasd-controls="enabled: false"
-      look-controls="enabled: false">
-    </a-camera>
-    
+    mindar-image="imageTargetSrc: ./calendar.json; autoStart: true"
+    renderer="colorManagement: true; antialias: true;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <a-camera></a-camera>
     <a-entity id="drawing-container"></a-entity>
   </a-scene>
 
@@ -192,142 +157,74 @@
     let audio = null;
     let isDrawing = false;
     let lastIntersection = null;
-    let cameraStream = null;
     let userInteracted = false;
 
-    // === Аудіо розблоковка ===
+    // === Розблокування аудіо ===
     function unlockAudio() {
       if (userInteracted) return;
       userInteracted = true;
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         audioCtx.resume();
-        
-        // Створюємо тихий звук для розблоковки аудіо в iOS
         const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        gainNode.gain.value = 0.001; // Дуже тихо
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.001;
+        oscillator.connect(gain);
+        gain.connect(audioCtx.destination);
         oscillator.start();
         setTimeout(() => oscillator.stop(), 100);
       } catch (e) {
-        console.log('Аудіо контекст не підтримується');
+        console.log('Аудіо не підтримується');
       }
     }
 
-    // === Touch events для мобільних ===
+    // === Touch → mouse емуляція ===
     function setupTouchEvents() {
       const scene = document.querySelector('a-scene');
-      
-      // Для touch пристроїв
-      scene.addEventListener('touchstart', (e) => {
-        if (e.touches.length > 0) {
-          const touch = e.touches[0];
-          const mouseEvent = new MouseEvent('mousedown', {
-            clientX: touch.clientX,
-            clientY: touch.clientY
-          });
-          scene.dispatchEvent(mouseEvent);
-        }
+      const emulate = (type, touch = {}) => {
+        scene.dispatchEvent(new MouseEvent(type, { clientX: touch.clientX, clientY: touch.clientY }));
+      };
+
+      scene.addEventListener('touchstart', e => {
+        if (e.touches.length > 0) emulate('mousedown', e.touches[0]);
         e.preventDefault();
       }, { passive: false });
 
-      scene.addEventListener('touchmove', (e) => {
-        if (e.touches.length > 0) {
-          const touch = e.touches[0];
-          const mouseEvent = new MouseEvent('mousemove', {
-            clientX: touch.clientX,
-            clientY: touch.clientY
-          });
-          scene.dispatchEvent(mouseEvent);
-        }
+      scene.addEventListener('touchmove', e => {
+        if (e.touches.length > 0) emulate('mousemove', e.touches[0]);
         e.preventDefault();
       }, { passive: false });
 
-      scene.addEventListener('touchend', (e) => {
-        scene.dispatchEvent(new MouseEvent('mouseup'));
+      scene.addEventListener('touchend', e => {
+        emulate('mouseup');
         e.preventDefault();
       }, { passive: false });
     }
 
-    // === Створення 12 цілей ===
+    // === Створення 12 цілей зі слухачами ===
     function createTargets() {
       const container = document.getElementById('drawing-container');
       for (let i = 0; i < 12; i++) {
         const target = document.createElement('a-entity');
         target.setAttribute('mindar-image-target', { targetIndex: i });
         target.id = `target-${i}`;
+        
+        // ✅ Події слухаємо на самій цілі
+        target.addEventListener('targetFound', onTargetFound);
+        target.addEventListener('targetLost', onTargetLost);
+        
         container.appendChild(target);
       }
     }
 
-    // === Запуск AR з обробкою помилок ===
-    async function startAR() {
-      try {
-        console.log('🚀 Запуск AR з камерою...');
-        
-        // Перевірка підтримки
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error('Камера не підтримується на цьому пристрої');
-        }
-
-        // Отримуємо доступ до камери
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { 
-            facingMode: 'environment',
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
-          audio: false
-        });
-        
-        // Показуємо прев'ю камери
-        const cameraPreview = document.getElementById('cameraPreview');
-        cameraPreview.srcObject = cameraStream;
-        cameraPreview.style.display = 'block';
-        
-        console.log('✅ Камера успішно підключена');
-
-        // Запускаємо MindAR
-        const scene = document.querySelector('a-scene');
-        const mindarSystem = scene.systems['mindar-image-system'];
-        
-        if (mindarSystem) {
-          // Чекаємо трохи для стабілізації камери
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          await mindarSystem.start();
-          console.log('✅ MindAR успішно запущено');
-          
-          // Активуємо камеру A-Frame
-          const aframeCamera = document.querySelector('a-camera');
-          aframeCamera.setAttribute('active', 'true');
-          
-          document.getElementById('hint').textContent = 'Покажи маркер камері! 📱';
-        }
-
-      } catch (err) {
-        console.error('❌ Помилка доступу до камери:', err);
-        
-        let errorMessage = '❌ Помилка камери! ';
-        if (err.name === 'NotAllowedError') {
-          errorMessage += 'Дозволь доступ до камери в налаштуваннях браузера.';
-        } else if (err.name === 'NotFoundError') {
-          errorMessage += 'Камера не знайдена.';
-        } else {
-          errorMessage += 'Спробуй пізніше.';
-        }
-        
-        document.getElementById('hint').textContent = errorMessage;
-        userInteracted = false; // Дозволяємо спробувати ще раз
-      }
-    }
-
-    // === Інші функції залишаються незмінними ===
+    // === Безпечні обробники подій ===
     function onTargetFound(e) {
+      if (!e?.detail?.targetIndex && e?.detail?.targetIndex !== 0) {
+        console.warn('⚠️ Некоректна подія targetFound', e);
+        return;
+      }
       const idx = e.detail.targetIndex;
-      console.log('Знайдено маркер:', idx);
+      console.log('🎯 Знайдено маркер:', idx);
       if (activeTargetIndex === idx) return;
       resetAll();
       activeTargetIndex = idx;
@@ -335,17 +232,17 @@
     }
 
     function onTargetLost(e) {
-      console.log('Втрачено маркер:', e.detail.targetIndex);
-      if (activeTargetIndex === e.detail.targetIndex) {
-        resetAll();
+      if (!e?.detail?.targetIndex && e?.detail?.targetIndex !== 0) {
+        console.warn('⚠️ Некоректна подія targetLost', e);
+        return;
       }
+      const idx = e.detail.targetIndex;
+      console.log('❌ Втрачено маркер:', idx);
+      if (activeTargetIndex === idx) resetAll();
     }
 
     function resetAll() {
-      if (audio) { 
-        audio.pause(); 
-        audio = null; 
-      }
+      if (audio) { audio.pause(); audio = null; }
       document.querySelectorAll('.draw-surface').forEach(el => el.remove());
       drawingCanvas = ctx = null;
       scale = 1;
@@ -353,68 +250,67 @@
       isDrawing = false;
     }
 
+    // === Завантаження зображення та звуку ===
     async function loadImageAndSound(idx) {
       try {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.src = `./images/${String(idx + 1).padStart(2, '0')}.jpg?t=${Date.now()}`;
-        
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = () => reject(new Error(`Не вдалося завантажити зображення ${idx + 1}`));
+        await new Promise((res, rej) => {
+          img.onload = res;
+          img.onerror = () => rej(new Error('Зображення не завантажилось'));
         });
 
         try {
           audio = new Audio(`./fon/fon${idx + 1}.mp3`);
           audio.loop = true;
           audio.volume = 0.5;
-          await audio.play().catch(e => console.log('🔇 Звук не відтворюється'));
-        } catch(e) {
-          console.log('Файл звуку не знайдено');
+          audio.play().catch(() => console.log('🔇 Звук вимкнено'));
+        } catch (e) {
+          console.log('Фон не знайдено');
         }
 
         createCanvas(img, idx);
-      } catch(error) {
-        console.error('Помилка завантаження:', error);
+      } catch (err) {
+        console.warn('Створюємо заглушку для малювання');
         createFallbackCanvas(idx);
       }
     }
 
     function createCanvas(img, idx) {
+      const max = 1024;
+      const ratio = Math.min(max / img.width, max / img.height, 1);
       const canvas = document.createElement('canvas');
-      // Обмежуємо розмір для мобільних пристроїв
-      const maxSize = 1024;
-      const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
       canvas.width = img.width * ratio;
       canvas.height = img.height * ratio;
-      
-      ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const ctx2d = canvas.getContext('2d');
+      ctx2d.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       const plane = document.createElement('a-plane');
       plane.className = 'draw-surface';
+      const w = 0.6;
+      const h = (canvas.height / canvas.width) * w;
       plane.setAttribute('position', '0 0 0.01');
-      plane.setAttribute('width', 0.6);
-      plane.setAttribute('height', (canvas.height / canvas.width) * 0.6);
+      plane.setAttribute('width', w);
+      plane.setAttribute('height', h);
       plane.setAttribute('material', 'src', canvas.toDataURL());
       plane.setAttribute('material', 'transparent', 'true');
-      plane.setAttribute('class', 'draw-surface interactive');
-      
+
       document.getElementById(`target-${idx}`).appendChild(plane);
       drawingCanvas = canvas;
+      ctx = ctx2d;
     }
 
     function createFallbackCanvas(idx) {
       const canvas = document.createElement('canvas');
-      canvas.width = 800;
-      canvas.height = 600;
-      ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#2a2a2a';
-      ctx.fillRect(0, 0, 800, 600);
-      ctx.fillStyle = '#fff';
-      ctx.font = '40px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Малюй тут!', 400, 300);
+      canvas.width = 800; canvas.height = 600;
+      const ctx2d = canvas.getContext('2d');
+      ctx2d.fillStyle = '#2a2a2a';
+      ctx2d.fillRect(0, 0, 800, 600);
+      ctx2d.fillStyle = '#fff';
+      ctx2d.font = '40px Arial';
+      ctx2d.textAlign = 'center';
+      ctx2d.fillText('Малюй тут!', 400, 300);
 
       const plane = document.createElement('a-plane');
       plane.className = 'draw-surface';
@@ -423,40 +319,34 @@
       plane.setAttribute('height', 0.45);
       plane.setAttribute('material', 'src', canvas.toDataURL());
       plane.setAttribute('material', 'transparent', 'true');
-      plane.setAttribute('class', 'draw-surface interactive');
-      
+
       document.getElementById(`target-${idx}`).appendChild(plane);
       drawingCanvas = canvas;
+      ctx = ctx2d;
     }
 
+    // === Малювання ===
     function handleDrawing(intersection) {
-      if (!intersection || !drawingCanvas || !ctx) return;
-      
+      if (!intersection || !drawingCanvas || !ctx || !intersection.uv) return;
       const uv = intersection.uv;
-      if (!uv) return;
-      
       const x = uv.x * drawingCanvas.width;
       const y = (1 - uv.y) * drawingCanvas.height;
-      
+
       if (isDrawing && lastIntersection) {
         const lastUV = lastIntersection.uv;
-        const lastX = lastUV.x * drawingCanvas.width;
-        const lastY = (1 - lastUV.y) * drawingCanvas.height;
-        
-        ctx.globalCompositeOperation = 'source-over';
+        const lx = lastUV.x * drawingCanvas.width;
+        const ly = (1 - lastUV.y) * drawingCanvas.height;
+
         ctx.strokeStyle = currentColor;
         ctx.lineWidth = brushSize;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        
         ctx.beginPath();
-        ctx.moveTo(lastX, lastY);
+        ctx.moveTo(lx, ly);
         ctx.lineTo(x, y);
         ctx.stroke();
-        
         updateCanvasTexture();
       }
-      
       lastIntersection = intersection;
     }
 
@@ -481,72 +371,54 @@
       document.getElementById('brushValue').textContent = brushSize;
     });
 
-    function zoomIn()  { 
-      scale = Math.min(3, scale + 0.25); 
-      updateScale(); 
-    }
-    
-    function zoomOut() { 
-      scale = Math.max(0.6, scale - 0.25); 
-      updateScale(); 
-    }
+    function zoomIn()  { scale = Math.min(3, scale + 0.25); updateScale(); }
+    function zoomOut() { scale = Math.max(0.6, scale - 0.25); updateScale(); }
     
     function updateScale() {
       const plane = document.querySelector('.draw-surface');
       if (!plane || !drawingCanvas) return;
       const baseW = 0.6;
-      const baseH = (drawingCanvas.height / drawingCanvas.width) * 0.6;
+      const baseH = (drawingCanvas.height / drawingCanvas.width) * baseW;
       plane.setAttribute('width', baseW * scale);
       plane.setAttribute('height', baseH * scale);
     }
 
-    function cleanup() {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-      }
-      resetAll();
-    }
-
     // === Ініціалізація ===
     document.querySelector('a-scene').addEventListener('loaded', () => {
-      console.log('Сцена завантажена, ініціалізація...');
+      console.log('🎬 Сцена завантажена');
       createTargets();
-      setupTouchEvents(); // ✅ Додаємо touch events
-      
+      setupTouchEvents();
+
       const scene = document.querySelector('a-scene');
-      scene.addEventListener('targetFound', onTargetFound);
-      scene.addEventListener('targetLost', onTargetLost);
       
+      // ✅ Події тепер на цілях — не додаємо сюди!
+
       scene.addEventListener('mousedown', (e) => {
-        if (e.detail.intersectedEl && e.detail.intersectedEl.classList.contains('draw-surface')) {
+        if (e.detail.intersectedEl?.classList.contains('draw-surface')) {
           isDrawing = true;
           lastIntersection = e.detail.intersection;
           handleDrawing(e.detail.intersection);
         }
       });
-      
+
       scene.addEventListener('mouseup', () => {
         isDrawing = false;
         lastIntersection = null;
       });
-      
+
       scene.addEventListener('mousemove', (e) => {
-        if (isDrawing && e.detail.intersectedEl && e.detail.intersectedEl.classList.contains('draw-surface')) {
+        if (isDrawing && e.detail.intersectedEl?.classList.contains('draw-surface')) {
           handleDrawing(e.detail.intersection);
         }
       });
 
-      // Запуск AR по кліку
-      document.body.addEventListener('click', () => {
-        unlockAudio();
-        startAR();
-      }, { once: true });
-      
-      document.getElementById('hint').textContent = 'Готово! Натисни для запуску камери 📱';
+      // Перший тап — розблокування аудіо
+      document.body.addEventListener('click', unlockAudio, { once: true });
+
+      document.getElementById('hint').textContent = 'Покажи маркер камері → малюй! 🎨';
     });
 
-    window.addEventListener('beforeunload', cleanup);
-    window.addEventListener('pagehide', cleanup);
+    window.addEventListener('beforeunload', resetAll);
   </script>
 </body>
 </html>
