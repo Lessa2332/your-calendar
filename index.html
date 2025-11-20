@@ -2,7 +2,7 @@
 <html lang="uk">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Магічне розфарбовування</title>
 
   <!-- ✅ ПРАВИЛЬНИЙ ПОРЯДОК -->
@@ -10,36 +10,128 @@
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body, html { margin:0; height:100%; overflow:hidden; background:#000; font-family:'Comic Sans MS',cursive,sans-serif; }
+    * { 
+      margin:0; padding:0; box-sizing:border-box; 
+      -webkit-tap-highlight-color: transparent; /* Видаляє синій highlight на тап */
+      -webkit-touch-callout: none; /* Вимикає меню на довгий тап */
+    }
+    
+    body, html { 
+      margin:0; height:100%; overflow:hidden; 
+      background:#000; font-family:'Comic Sans MS',cursive,sans-serif;
+      touch-action: manipulation; /* Запобігає зуму на тап */
+      position: fixed; /* Фіксує скрол */
+      width: 100%;
+    }
+    
     #hint { 
-      position:fixed; top:20px; left:50%; transform:translateX(-50%); 
-      background:#ff1493; color:#fff; padding:16px 32px; border-radius:50px; 
-      font-size:24px; z-index:999; box-shadow:0 0 30px #ff1493; text-align:center; 
+      position:fixed; top: max(20px, env(safe-area-inset-top, 20px)); 
+      left:50%; transform:translateX(-50%); 
+      background:#ff1493; color:#fff; padding:12px 24px; 
+      border-radius:50px; font-size:clamp(16px, 4vw, 24px); 
+      z-index:999; box-shadow:0 0 30px #ff1493; text-align:center;
+      width: 90%;
+      max-width: 400px;
     }
+    
     .controls { 
-      position:fixed; bottom:20px; left:50%; transform:translateX(-50%); 
-      display:flex; gap:15px; align-items:center; z-index:1000; 
-      background:rgba(0,0,0,0.75); padding:15px 20px; border-radius:30px; 
+      position:fixed; 
+      bottom: max(20px, env(safe-area-inset-bottom, 20px));
+      left:50%; transform:translateX(-50%); 
+      display:flex; gap:10px; align-items:center; z-index:1000; 
+      background:rgba(0,0,0,0.85); padding:12px 16px; border-radius:25px; 
+      backdrop-filter: blur(10px);
+      width: 95%;
+      max-width: 500px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
-    .colors { display:flex; gap:8px; }
+    
+    .colors { 
+      display:flex; gap:6px; 
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
     .color-btn { 
-      width:44px; height:44px; border-radius:50%; border:4px solid transparent; 
+      width:clamp(36px, 8vw, 44px); 
+      height:clamp(36px, 8vw, 44px); 
+      border-radius:50%; border:3px solid transparent; 
       cursor:pointer; transition:all .2s; 
+      flex-shrink: 0;
     }
+    
     .color-btn.active { 
-      border:4px solid white; transform:scale(1.15); 
+      border:3px solid white; transform:scale(1.15); 
       box-shadow:0 0 15px rgba(255,255,255,0.6); 
     }
-    input[type="range"] { width:130px; accent-color:#ff1493; }
-    .zoom-btn { 
-      width:50px; height:50px; border-radius:50%; background:#fff; color:#000; 
-      font-size:28px; font-weight:bold; display:flex; align-items:center; 
-      justify-content:center; cursor:pointer; user-select:none; 
+    
+    input[type="range"] { 
+      width:clamp(100px, 25vw, 130px); 
+      accent-color:#ff1493; 
+      flex-shrink: 0;
     }
-    #brushValue { color:white; font-size:18px; min-width:30px; text-align:center; }
+    
+    .zoom-btn { 
+      width:clamp(42px, 10vw, 50px); 
+      height:clamp(42px, 10vw, 50px); 
+      border-radius:50%; background:#fff; color:#000; 
+      font-size:clamp(20px, 6vw, 28px); font-weight:bold; 
+      display:flex; align-items:center; justify-content:center; 
+      cursor:pointer; user-select:none; flex-shrink: 0;
+    }
+    
+    #brushValue { 
+      color:white; font-size:clamp(14px, 4vw, 18px); 
+      min-width:30px; text-align:center; 
+      flex-shrink: 0;
+    }
+    
     #cameraPreview {
-      position:fixed; top:0; left:0; width:100%; height:100%; object-fit:cover; z-index:0;
-      display:none;
+      position:fixed; top:0; left:0; width:100%; height:100%; 
+      object-fit:cover; z-index:0; display:none;
+    }
+    
+    /* Додаткові стилі для iOS */
+    @supports (-webkit-touch-callout: none) {
+      .controls {
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      }
+    }
+    
+    /* Анімації для кращої взаємодії */
+    .color-btn:active, .zoom-btn:active {
+      transform: scale(0.95);
+      transition: transform 0.1s;
+    }
+    
+    /* Адаптація для вертикальних екранів */
+    @media (max-height: 700px) {
+      .controls {
+        padding: 8px 12px;
+        gap: 8px;
+      }
+      
+      .colors {
+        gap: 4px;
+      }
+      
+      #hint {
+        padding: 8px 16px;
+        font-size: clamp(14px, 3.5vw, 18px);
+      }
+    }
+    
+    /* Адаптація для дуже малих екранів */
+    @media (max-width: 350px) {
+      .controls {
+        flex-direction: column;
+        gap: 8px;
+      }
+      
+      .colors {
+        order: 1;
+      }
     }
   </style>
 </head>
@@ -60,30 +152,37 @@
       <div class="color-btn" data-color="#feca57" style="background:#feca57"></div>
       <div class="color-btn" data-color="#2d3436" style="background:#2d3436"></div>
     </div>
-    <input type="range" id="brushSize" min="3" max="50" value="15">
-    <div id="brushValue">15</div>
-    <div class="zoom-btn" onclick="zoomIn()">+</div>
-    <div class="zoom-btn" onclick="zoomOut()">–</div>
+    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+      <input type="range" id="brushSize" min="3" max="50" value="15">
+      <div id="brushValue">15</div>
+    </div>
+    <div style="display: flex; gap: 5px; flex-shrink: 0;">
+      <div class="zoom-btn" onclick="zoomIn()">+</div>
+      <div class="zoom-btn" onclick="zoomOut()">–</div>
+    </div>
   </div>
 
   <a-scene
     embedded
     mindar-image="imageTargetSrc: ./calendar.mind; autoStart:false; uiLoading:no; uiError:no; uiScanning:no; filterMinCF:0.0001; filterBeta:1000; warmupTolerance:5"
-    renderer="colorManagement:true"
+    renderer="colorManagement:true; antialias: true;"
     vr-mode-ui="enabled:false"
-    device-orientation-permission-ui="enabled:false">
+    device-orientation-permission-ui="enabled:false"
+    xr-mode-ui="enabled: false">
     
-    <!-- ✅ ДОДАНО RAYCASTER -->
     <a-camera 
       active="false"
       raycaster="objects: .draw-surface; far: 100"
-      cursor="fuse: false; rayOrigin: mouse">
+      cursor="fuse: false; rayOrigin: mouse"
+      wasd-controls="enabled: false"
+      look-controls="enabled: false">
     </a-camera>
     
     <a-entity id="drawing-container"></a-entity>
   </a-scene>
 
   <script>
+    // === Глобальні змінні ===
     let currentColor = '#ff6961';
     let brushSize = 15;
     let scale = 1;
@@ -100,8 +199,56 @@
     function unlockAudio() {
       if (userInteracted) return;
       userInteracted = true;
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      ctx.resume();
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx.resume();
+        
+        // Створюємо тихий звук для розблоковки аудіо в iOS
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0.001; // Дуже тихо
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        setTimeout(() => oscillator.stop(), 100);
+      } catch (e) {
+        console.log('Аудіо контекст не підтримується');
+      }
+    }
+
+    // === Touch events для мобільних ===
+    function setupTouchEvents() {
+      const scene = document.querySelector('a-scene');
+      
+      // Для touch пристроїв
+      scene.addEventListener('touchstart', (e) => {
+        if (e.touches.length > 0) {
+          const touch = e.touches[0];
+          const mouseEvent = new MouseEvent('mousedown', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+          });
+          scene.dispatchEvent(mouseEvent);
+        }
+        e.preventDefault();
+      }, { passive: false });
+
+      scene.addEventListener('touchmove', (e) => {
+        if (e.touches.length > 0) {
+          const touch = e.touches[0];
+          const mouseEvent = new MouseEvent('mousemove', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+          });
+          scene.dispatchEvent(mouseEvent);
+        }
+        e.preventDefault();
+      }, { passive: false });
+
+      scene.addEventListener('touchend', (e) => {
+        scene.dispatchEvent(new MouseEvent('mouseup'));
+        e.preventDefault();
+      }, { passive: false });
     }
 
     // === Створення 12 цілей ===
@@ -115,12 +262,17 @@
       }
     }
 
-    // === ЗАПИТ КАМЕРИ (як у Halloween версії) ===
+    // === Запуск AR з обробкою помилок ===
     async function startAR() {
       try {
         console.log('🚀 Запуск AR з камерою...');
         
-        // Спочатку отримуємо доступ до камери
+        // Перевірка підтримки
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Камера не підтримується на цьому пристрої');
+        }
+
+        // Отримуємо доступ до камери
         cameraStream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: 'environment',
@@ -137,11 +289,14 @@
         
         console.log('✅ Камера успішно підключена');
 
-        // Тепер запускаємо MindAR
+        // Запускаємо MindAR
         const scene = document.querySelector('a-scene');
         const mindarSystem = scene.systems['mindar-image-system'];
         
         if (mindarSystem) {
+          // Чекаємо трохи для стабілізації камери
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
           await mindarSystem.start();
           console.log('✅ MindAR успішно запущено');
           
@@ -154,14 +309,22 @@
 
       } catch (err) {
         console.error('❌ Помилка доступу до камери:', err);
-        document.getElementById('hint').textContent = '❌ Дозволь доступ до камери! Натисни знову.';
         
-        // Дозволяємо спробувати ще раз
-        userInteracted = false;
+        let errorMessage = '❌ Помилка камери! ';
+        if (err.name === 'NotAllowedError') {
+          errorMessage += 'Дозволь доступ до камери в налаштуваннях браузера.';
+        } else if (err.name === 'NotFoundError') {
+          errorMessage += 'Камера не знайдена.';
+        } else {
+          errorMessage += 'Спробуй пізніше.';
+        }
+        
+        document.getElementById('hint').textContent = errorMessage;
+        userInteracted = false; // Дозволяємо спробувати ще раз
       }
     }
 
-    // === Події маркерів ===
+    // === Інші функції залишаються незмінними ===
     function onTargetFound(e) {
       const idx = e.detail.targetIndex;
       console.log('Знайдено маркер:', idx);
@@ -190,7 +353,6 @@
       isDrawing = false;
     }
 
-    // === Завантаження зображення + звук ===
     async function loadImageAndSound(idx) {
       try {
         const img = new Image();
@@ -202,11 +364,11 @@
           img.onerror = () => reject(new Error(`Не вдалося завантажити зображення ${idx + 1}`));
         });
 
-        // Спроба завантажити звук
         try {
           audio = new Audio(`./fon/fon${idx + 1}.mp3`);
           audio.loop = true;
-          await audio.play().catch(e => console.log('Звук не відтворюється:', e));
+          audio.volume = 0.5;
+          await audio.play().catch(e => console.log('🔇 Звук не відтворюється'));
         } catch(e) {
           console.log('Файл звуку не знайдено');
         }
@@ -214,37 +376,34 @@
         createCanvas(img, idx);
       } catch(error) {
         console.error('Помилка завантаження:', error);
-        // Створюємо просту кольорову поверхню як запасний варіант
         createFallbackCanvas(idx);
       }
     }
 
-    // === Створення полотна для малювання ===
     function createCanvas(img, idx) {
       const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
+      // Обмежуємо розмір для мобільних пристроїв
+      const maxSize = 1024;
+      const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      
       ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
       const plane = document.createElement('a-plane');
       plane.className = 'draw-surface';
       plane.setAttribute('position', '0 0 0.01');
       plane.setAttribute('width', 0.6);
-      plane.setAttribute('height', (img.height / img.width) * 0.6);
+      plane.setAttribute('height', (canvas.height / canvas.width) * 0.6);
       plane.setAttribute('material', 'src', canvas.toDataURL());
       plane.setAttribute('material', 'transparent', 'true');
-      
-      // ✅ Додаємо обробники подій для малювання
       plane.setAttribute('class', 'draw-surface interactive');
       
       document.getElementById(`target-${idx}`).appendChild(plane);
       drawingCanvas = canvas;
-
-      console.log('Полотно створено для цілі:', idx);
     }
 
-    // === Запасний варіант (якщо зображення не завантажилось) ===
     function createFallbackCanvas(idx) {
       const canvas = document.createElement('canvas');
       canvas.width = 800;
@@ -270,7 +429,6 @@
       drawingCanvas = canvas;
     }
 
-    // === Обробка малювання через Raycaster ===
     function handleDrawing(intersection) {
       if (!intersection || !drawingCanvas || !ctx) return;
       
@@ -278,14 +436,13 @@
       if (!uv) return;
       
       const x = uv.x * drawingCanvas.width;
-      const y = (1 - uv.y) * drawingCanvas.height; // Інвертуємо Y координату
+      const y = (1 - uv.y) * drawingCanvas.height;
       
       if (isDrawing && lastIntersection) {
         const lastUV = lastIntersection.uv;
         const lastX = lastUV.x * drawingCanvas.width;
         const lastY = (1 - lastUV.y) * drawingCanvas.height;
         
-        // Малюємо лінію
         ctx.globalCompositeOperation = 'source-over';
         ctx.strokeStyle = currentColor;
         ctx.lineWidth = brushSize;
@@ -297,7 +454,6 @@
         ctx.lineTo(x, y);
         ctx.stroke();
         
-        // Оновлюємо текстуру
         updateCanvasTexture();
       }
       
@@ -311,7 +467,7 @@
       }
     }
 
-    // === Керування кольором ===
+    // === Керування ===
     document.querySelectorAll('.color-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
@@ -320,13 +476,11 @@
       });
     });
 
-    // === Розмір пензля ===
     document.getElementById('brushSize').addEventListener('input', e => {
       brushSize = Number(e.target.value);
       document.getElementById('brushValue').textContent = brushSize;
     });
 
-    // === Зум ===
     function zoomIn()  { 
       scale = Math.min(3, scale + 0.25); 
       updateScale(); 
@@ -346,7 +500,6 @@
       plane.setAttribute('height', baseH * scale);
     }
 
-    // === Прибирання ===
     function cleanup() {
       if (cameraStream) {
         cameraStream.getTracks().forEach(track => track.stop());
@@ -358,12 +511,12 @@
     document.querySelector('a-scene').addEventListener('loaded', () => {
       console.log('Сцена завантажена, ініціалізація...');
       createTargets();
+      setupTouchEvents(); // ✅ Додаємо touch events
       
       const scene = document.querySelector('a-scene');
       scene.addEventListener('targetFound', onTargetFound);
       scene.addEventListener('targetLost', onTargetLost);
       
-      // ✅ Обробка малювання через події A-Frame
       scene.addEventListener('mousedown', (e) => {
         if (e.detail.intersectedEl && e.detail.intersectedEl.classList.contains('draw-surface')) {
           isDrawing = true;
@@ -383,7 +536,7 @@
         }
       });
 
-      // Запуск AR по кліку (з аудіо розблоковкою)
+      // Запуск AR по кліку
       document.body.addEventListener('click', () => {
         unlockAudio();
         startAR();
@@ -392,7 +545,6 @@
       document.getElementById('hint').textContent = 'Готово! Натисни для запуску камери 📱';
     });
 
-    // Обробка закриття сторінки
     window.addEventListener('beforeunload', cleanup);
     window.addEventListener('pagehide', cleanup);
   </script>
