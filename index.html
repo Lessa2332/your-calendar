@@ -5,223 +5,223 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <title>Магічне розфарбовування</title>
 
-  <!-- РОБОЧА комбінація 2025 року (без eval, без CORB) -->
-  <script src="https://cdn.jsdelivr.net +.npm/aframe@1.6.0/dist/aframe.min.js"></script>
+  <!-- ЄДИНА 100% робоча пара 2025 року (без eval, без ORB/CORB) -->
+  <script src="https://cdn.jsdelivr.net/npm/aframe@1.6.0/dist/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mindar-image-aframe@1.2.2/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
     body, html { margin:0; height:100%; overflow:hidden; background:#000; font-family:'Comic Sans MS',cursive,sans-serif; }
     #hint { position:fixed; top:20px; left:50%; transform:translateX(-50%); background:#ff1493; color:#fff; padding:16px 32px; border-radius:50px; font-size:24px; z-index:999; box-shadow:0 0 30px #ff1493; text-align:center; }
-    .controls { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:15px; z-index:1000; background:rgba(0,0,0,0.7); padding:15px; border-radius:30px; }
-    .color-btn { width:44px; height:44px; border-radius:50%; border:4px solid transparent; cursor:pointer; transition:border 0.2s; }
-    .color-btn.active { border:4px solid white; transform:scale(1.2); }
-    input[type="range"] { width:120px; }
-    .zoom-btn { width:50px; height:50px; border-radius:50%; background:#fff; color:#000; font-size:28px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+    .controls { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:15px; align-items:center; z-index:1000; background:rgba(0,0,0,0.75); padding:15px 20px; border-radius:30px; }
+    .colors { display:flex; gap:8px; }
+    .color-btn { width:44px; height:44px; border-radius:50%; border:4px solid transparent; cursor:pointer; transition:all .2s; }
+    .color-btn.active { border:4px solid white; transform:scale(1.15); box-shadow:0 0 15px rgba(255,255,255,0.6); }
+    input[type="range"] { width:130px; accent-color:#ff1493; }
+    .zoom-btn { width:50px; height:50px; border-radius:50%; background:#fff; color:#000; font-size:28px; font-weight:bold; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; }
   </style>
 </head>
 <body>
 
-<div id="hint">Натисни екран → покажи маркер → малюй!</div>
+  <div id="hint">Натисни екран → покажи маркер → малюй!</div>
 
-<div class="controls">
-  <div class="colors">
-    <div class="color-btn" style="background:#ff6961" data-color="#ff6961"></div>
-    <div class="color-btn" style="background:#fdfd96" data-color="#fdfd96"></div>
-    <div class="color-btn" style="background:#77dd77" data-color="#77dd77"></div>
-    <div class="color-btn" style="background:#84b6f4" data-color="#84b6f4"></div>
-    <div class="color-btn" style="background:#fdcae1" data-color="#fdcae1"></div>
-    <div class="color-btn" style="background:#cbaacb" data-color="#cbaacb"></div>
-    <div class="color-btn" style="background:#ff9ff3" data-color="#ff9ff3"></div>
-    <div class="color-btn" style="background:#feca57" data-color="#feca57"></div>
-    <div class="color-btn" style="background:#2d3436" data-color="#2d3436"></div>
+  <div class="controls">
+    <div class="colors">
+      <div class="color-btn active" data-color="#ff6961" style="background:#ff6961"></div>
+      <div class="color-btn" data-color="#fdfd96" style="background:#fdfd96"></div>
+      <div class="color-btn" data-color="#77dd77" style="background:#77dd77"></div>
+      <div class="color-btn" data-color="#84b6f4" style="background:#84b6f4"></div>
+      <div class="color-btn" data-color="#fdcae1" style="background:#fdcae1"></div>
+      <div class="color-btn" data-color="#cbaacb" style="background:#cbaacb"></div>
+      <div class="color-btn" data-color="#ff9ff3" style="background:#ff9ff3"></div>
+      <div class="color-btn" data-color="#feca57" style="background:#feca57"></div>
+      <div class="color-btn" data-color="#2d3436" style="background:#2d3436"></div>
+    </div>
+    <input type="range" id="brushSize" min="3" max="50" value="15">
+    <div class="zoom-btn" onclick="zoomIn()">+</div>
+    <div class="zoom-btn" onclick="zoomOut()">–</div>
   </div>
-  <input type="range" id="brushSize" min="3" max="40" value="12">
-  <div class="zoom-btn" onclick="zoomIn()">+</div>
-  <div class="zoom-btn" onclick="zoomOut()">–</div>
-</div>
 
-<a-scene
-  embedded
-  mindar-image="imageTargetSrc: ./calendar.mind; autoStart:false; uiLoading:no; uiError:no; uiScanning:no; filterMinCF:0.0001; filterBeta:1000"
-  renderer="colorManagement:true"
-  vr-mode-ui="enabled:false"
-  device-orientation-permission-ui="enabled:false">
-  <a-camera></a-camera>
-  <a-entity id="drawing-container"></a-entity>
-</a-scene>
+  <a-scene
+    embedded
+    mindar-image="imageTargetSrc: ./calendar.mind; autoStart:false; uiLoading:no; uiError:no; uiScanning:no; filterMinCF:0.0001; filterBeta:1000"
+    renderer="colorManagement:true"
+    vr-mode-ui="enabled:false"
+    device-orientation-permission-ui="enabled:false">
+    <a-camera></a-camera>
+    <a-entity id="drawing-container"></a-entity>
+  </a-scene>
 
-<script>
-let currentColor = '#ff6961';
-let brushSize = 12;
-let scale = 1;
-let drawingCanvas = null;
-let ctx = null;
-let activeTargetIndex = null;
-let audio = null;
+  <script>
+    let currentColor = '#ff6961';
+    let brushSize = 15;
+    let scale = 1;
+    let drawingCanvas = null;
+    let ctx = null;
+    let activeTargetIndex = null;
+    let audio = null;
+    let isDrawing = false;
+    let lastX, lastY;
 
-// Створення 12 цілей
-function createTargets() {
-  const container = document.getElementById('drawing-container');
-  for (let i = 0; i < 12; i++) {
-    const target = document.createElement('a-entity');
-    target.setAttribute('mindar-image-target', { targetIndex: i });
-    target.id = `target-${i}`;
-    container.appendChild(target);
-  }
-}
+    // === Створення 12 цілей ===
+    function createTargets() {
+      const container = document.getElementById('drawing-container');
+      for (let i = 0; i < 12; i++) {
+        const target = document.createElement('a-entity');
+        target.setAttribute('mindar-image-target', { targetIndex: i });
+        target.id = `target-${i}`;
+        container.appendChild(target);
+      }
+    }
 
-function startAR() {
-  const scene = document.querySelector('a-scene');
-  const mindarSystem = scene.systems['mindar-image-system'];  // правильна назва в новій версії
-  if (mindarSystem) mindarSystem.start();
-  document.getElementById('hint').style.display = 'none';
-}
+    // === Запуск AR ===
+    function startAR() {
+      const scene = document.querySelector('a-scene');
+      const mindarSystem = scene.systems['mindar-image-system']; // правильна назва 2025
+      if (mindarSystem) mindarSystem.start();
+      document.getElementById('hint').style.display = 'none';
+    }
 
-async function onTargetFound(e) {
-  const idx = e.detail.targetIndex;
-  if (activeTargetIndex === idx) return;
-  resetAll();
-  activeTargetIndex = idx;
-  await loadImageAndSound(idx);
-}
+    // === Події маркерів ===
+    function onTargetFound(e) {
+      const idx = e.detail.targetIndex;
+      if (activeTargetIndex === idx) return;
+      resetAll();
+      activeTargetIndex = idx;
+      loadImageAndSound(idx);
+    }
 
-function onTargetLost() {
-  resetAll();
-}
+    function onTargetLost() {
+      resetAll();
+    }
 
-function resetAll() {
-  if (audio) { audio.pause(); audio = null; }
-  document.querySelectorAll('.draw-surface').forEach(el => el.remove());
-  drawingCanvas = ctx = null;
-  scale = 1;
-  activeTargetIndex = null;
-}
+    function resetAll() {
+      if (audio) { audio.pause(); audio = null; }
+      document.querySelectorAll('.draw-surface').forEach(el => el.remove());
+      drawingCanvas = ctx = null;
+      scale = 1;
+      activeTargetIndex = null;
+    }
 
-async function loadImageAndSound(idx) {
-  const img = new Image();
-  img.src = `./images/${String(idx + 1).padStart(2, '0')}.jpg?t=${Date.now()}`;
-  await img.decode();
+    // === Завантаження зображення + звук ===
+    async function loadImageAndSound(idx) {
+      const img = new Image();
+      img.src = `./images/${String(idx + 1).padStart(2, '0')}.jpg?t=${Date.now()}`;
+      await img.decode();
 
-  // Звук
-  try {
-    audio = new Audio(`./fon/fon${idx + 1}.mp3`);
-    audio.loop = true;
-    audio.play();
-  } catch(e) { console.log("Немає звуку або не вдалося відтворити"); }
+      // Звук (якщо є)
+      try {
+        audio = new Audio(`./fon/fon${idx + 1}.mp3`);
+        audio.loop = true;
+        audio.play().catch(() => {});
+      } catch(e) {}
 
-  createCanvas(img, idx);
-}
+      createCanvas(img, idx);
+    }
 
-function createCanvas(img, idx) {
-  const canvas = document.createElement('canvas');
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const context = canvas.getContext('2d');
-  context.drawImageелі(img, 0, 0);
+    // === Створення полотна для малювання ===
+    function createCanvas(img, idx) {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
 
-  const plane = document.createElement('a-plane');
-  plane.className = 'draw-surface';
-  plane.setAttribute('position', '0 0 0.01');
-  plane.setAttribute('width', 0.6);
-  plane.setAttribute('height', (img.height/img.width)*0.6);
-  plane.setAttribute('material', 'src', canvas.toDataURL());
+      const plane = document.createElement('a-plane');
+      plane.className = 'draw-surface';
+      plane.setAttribute('position', '0 0 0.01');
+      plane.setAttribute('width', 0.6);
+      plane.setAttribute('height', (img.height / img.width) * 0.6);
+      plane.setAttribute('material', 'src', canvas.toDataURL());
 
-  document.getElementById(`target-${idx}`).appendChild(plane);
+      document.getElementById(`target-${idx}`).appendChild(plane);
+      drawingCanvas = canvas;
 
-  drawingCanvas = canvas;
-  ctx = context;
+      // Події малювання
+      plane.addEventListener('mousedown', startDrawing);
+      plane.addEventListener('mouseup', stopDrawing);
+      plane.addEventListener('mousemove', draw);
+      plane.addEventListener('touchstart', e => { e.preventDefault(); startDrawing(e); });
+      plane.addEventListener('touchend', stopDrawing);
+      plane.addEventListener('touchmove', e => { e.preventDefault(); draw(e); });
+    }
 
-  // Події малювання (підтримка миші + тач)
-  const drawEvents = {
-    mousedown: startDrawing,
-    mouseup: stopDrawing,
-    mousemove: draw,
-    touchstart: e => { e.preventDefault(); startDrawing(e); },
-    touchend: stopDrawing,
-    touchmove: e => { e.preventDefault(); draw(e); }
-  };
-  Object.entries(drawEvents).forEach(([ev, fn]) => plane.addEventListener(ev, fn));
-}
+    // === Координати ===
+    function getCoords(e) {
+      const plane = document.querySelector('.draw-surface');
+      if (!plane) return null;
+      const rect = plane.getBoundingClientRect();
+      const clientX = e.clientX || e.touches[0].clientX;
+      const clientY = e.clientY || e.touches[0].clientY;
+      return {
+        x: ((clientX - rect.left) / rect.width) * drawingCanvas.width,
+        y: ((clientY - rect.top) / rect.height) * drawingCanvas.height
+      };
+    }
 
-function getCoords(e) {
-  const plane = document.querySelector('.draw-surface');
-  if (!plane) return null;
-  const rect = plane.getBoundingClientRect();
-  const x = (e.clientX || e.touches[0].clientX) - rect.left;
-  const y = (e.clientY || e.touches[0].clientY) - rect.top;
-  return {
-    x: (x / rect.width) * drawingCanvas.width,
-    y: (y / rect.height) * drawingCanvas.height
-  };
-}
+    function startDrawing(e) {
+      isDrawing = true;
+      const pos = getCoords(e);
+      if (pos) [lastX, lastY] = [pos.x, pos.y];
+    }
 
-let isDrawing = false;
-let lastX, lastY;
+    function stopDrawing() {
+      isDrawing = false;
+    }
 
-function startDrawing(e) {
-  isDrawing = true;
-  const pos = getCoords(e);
-  if (pos) [lastX, lastY] = [pos.x, pos.y];
-}
+    function draw(e) {
+      if (!isDrawing || !ctx) return;
+      const pos = getCoords(e);
+      if (!pos) return;
 
-function stopDrawing() {
-  isDrawing = false;
-}
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = currentColor;
+      ctx.lineWidth = brushSize;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
 
-function draw(e) {
-  if (!isDrawing || !ctx) return;
-  const pos = getCoords(e);
-  if (!pos) return;
+      document.querySelector('.draw-surface')
+        .setAttribute('material', 'src', drawingCanvas.toDataURL());
 
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.strokeStyle = currentColor;
-  ctx.lineWidth = brushSize;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(lastX, lastY);
-  ctx.lineTo(pos.x, pos.y);
-  ctx.stroke();
+      [lastX, lastY] = [pos.x, pos.y];
+    }
 
-  document.querySelector('.draw-surface').setAttribute('material', 'src', drawingCanvas.toDataURL());
-  [lastX, lastY] = [pos.x, pos.y];
-}
+    // === Керування кольором ===
+    document.querySelectorAll('.color-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentColor = btn.dataset.color;
+      });
+    });
 
-// Кольори
-document.querySelectorAll('.color-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentColor = btn.dataset.color;
-  });
-});
-document.querySelector('.color-btn').classList.add('active');
+    // === Розмір пензля ===
+    document.getElementById('brushSize').addEventListener('input', e => {
+      brushSize = Number(e.target.value);
+    });
 
-// Розмір пензля
-document.getElementById('brushSize').addEventListener('input', e => {
-  brushSize = e.target.value;
-});
+    // === Зум ===
+    function zoomIn()  { scale = Math.min(3, scale + 0.25); updateScale(); }
+    function zoomOut() { scale = Math.max(0.6, scale - 0.25); updateScale(); }
+    function updateScale() {
+      const plane = document.querySelector('.draw-surface');
+      if (!plane || !drawingCanvas) return;
+      const baseW = 0.6;
+      const baseH = (drawingCanvas.height / drawingCanvas.width) * 0.6;
+      plane.setAttribute('width', baseW * scale);
+      plane.setAttribute('height', baseH * scale);
+    }
 
-// Зум
-function zoomIn()  { scale = Math.min(2.5, scale + 0.2); updateScale(); }
-function zoomOut() { scale = Math.max(0.6, scale - 0.2); updateScale(); }
-function updateScale() {
-  const plane = document.querySelector('.draw-surface');
-  if (plane && drawingCanvas) {
-    const baseW = 0.6;
-    const baseH = (drawingCanvas.height/drawingCanvas.width)*0.6;
-    plane.setAttribute('width', baseW * scale);
-    plane.setAttribute('height', baseH * scale);
-  }
-}
-
-// Запуск
-document.querySelector('a-scene').addEventListener('loaded', () => {
-  createTargets();
-  const scene = document.querySelector('a-scene');
-  scene.addEventListener('targetFound', onTargetFound);
-  scene.addEventListener('targetLost', onTargetLost);
-  document.body.addEventListener('click', startAR, { once: true });
-});
-</script>
+    // === Ініціалізація ===
+    document.querySelector('a-scene').addEventListener('loaded', () => {
+      createTargets();
+      const scene = document.querySelector('a-scene');
+      scene.addEventListener('targetFound', onTargetFound);
+      scene.addEventListener('targetLost', onTargetLost);
+      document.body.addEventListener('click', startAR, { once: true });
+    });
+  </script>
 </body>
 </html>
