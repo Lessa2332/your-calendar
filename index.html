@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <title>Магічне розфарбовування</title>
 
-  <!-- ✅ ЄДИНА робоча комбінація 2025: mind-ar@1.2.5 (без eval) + npm A-Frame -->
-  <script src="https://cdn.jsdelivr.net/npm/aframe@1.6.0/dist/aframe.min.js"></script>
+  <!-- ✅ Правильний порядок для MindAR v1.2.5: core → A-Frame → extension (AFRAME defined) -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
@@ -76,7 +77,7 @@
     // === Запуск AR ===
     function startAR() {
       const scene = document.querySelector('a-scene');
-      const mindarSystem = scene.systems['mindar-image-system']; // ✅ Правильно для mind-ar@1.2.5
+      const mindarSystem = scene.systems['mindar-image-system']; // ✅ Правильно для v1.2.5
       if (mindarSystem) mindarSystem.start();
       document.getElementById('hint').style.display = 'none';
     }
