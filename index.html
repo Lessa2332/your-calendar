@@ -23,7 +23,7 @@
       display: none;
       cursor: crosshair;
       touch-action: none;
-      background: transparent !important; /* ✅ ПРОЗОРИЙ ФОН */
+      background: transparent !important;
     }
     
     #hint {
@@ -67,7 +67,6 @@
       border:3px solid transparent; 
       cursor:pointer;
       transition:all .2s; 
-      background-size:cover;
     }
     
     .color-btn.active { 
@@ -118,6 +117,15 @@
       z-index: 101;
       display: none;
     }
+
+    /* Контур для області малювання */
+    .drawing-area {
+      position: absolute;
+      border: 2px dashed rgba(255, 255, 255, 0.5);
+      pointer-events: none;
+      z-index: 99;
+      display: none;
+    }
     
     /* AR сцена прозора */
     a-scene {
@@ -133,8 +141,9 @@
 </head>
 <body>
 
-  <!-- КАНВАС ДЛЯ РОЗМАЛЬОВУВАННЯ З ПРОЗОРИМ ФОНОМ -->
+  <!-- КАНВАС ДЛЯ РОЗМАЛЬОВУВАННЯ -->
   <canvas id="drawingCanvas"></canvas>
+  <div id="drawingArea" class="drawing-area"></div>
   <button id="closeDrawing">✕</button>
   
   <div id="hint">Натисни екран → покажи маркер → малюй!</div>
@@ -161,7 +170,7 @@
     </div>
   </div>
 
-  <!-- AR СЦЕНА (ТІЛЬКИ ДЛЯ ЗАПУСКУ) -->
+  <!-- AR СЦЕНА -->
   <a-scene
     embedded
     mindar-image="imageTargetSrc: calendar.mind; filterMinCF:0.0001; filterBeta:1000; warmupTolerance:5; autoStart: false;"
@@ -200,16 +209,20 @@
       let audio = null;
       let activeMarkerIndex = null;
       let originalImageData = null;
+      
+      // ✅ НОВІ ЗМІННІ ДЛЯ АДАПТАЦІЇ
+      let drawingArea = {
+        x: 0, y: 0, width: 0, height: 0
+      };
+      let isInDrawingArea = false;
 
       // === ІНІЦІАЛІЗАЦІЯ КАНВАСУ ===
       function initCanvas() {
         canvas = document.getElementById('drawingCanvas');
         ctx = canvas.getContext('2d');
         
-        // ✅ Встановлюємо прозорий фон для canvas
         canvas.style.background = 'transparent';
         
-        // Встановлюємо розміри canvas
         function resizeCanvas() {
           canvas.width = window.innerWidth;
           canvas.height = window.innerHeight;
@@ -226,6 +239,10 @@
         canvas.addEventListener('mouseup', stopDrawing);
         canvas.addEventListener('touchend', stopDrawing);
         canvas.addEventListener('mouseleave', stopDrawing);
+        
+        // ✅ Додаємо обробник для перевірки області малювання
+        canvas.addEventListener('mousemove', checkDrawingArea);
+        canvas.addEventListener('touchmove', checkDrawingArea);
       }
 
       function handleTouchStart(e) {
@@ -248,7 +265,26 @@
         canvas.dispatchEvent(mouseEvent);
       }
 
+      // ✅ ПЕРЕВІРКА ЧИ КУРСОР В ОБЛАСТІ МАЛЮВАННЯ
+      function checkDrawingArea(e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        isInDrawingArea = (
+          x >= drawingArea.x && 
+          x <= drawingArea.x + drawingArea.width &&
+          y >= drawingArea.y && 
+          y <= drawingArea.y + drawingArea.height
+        );
+        
+        // Змінюємо курсор
+        canvas.style.cursor = isInDrawingArea ? 'crosshair' : 'not-allowed';
+      }
+
       function startDrawing(e) {
+        if (!isInDrawingArea) return; // ✅ Малюємо тільки в області зображення
+        
         isDrawing = true;
         const rect = canvas.getBoundingClientRect();
         lastX = e.clientX - rect.left;
@@ -256,7 +292,7 @@
       }
 
       function draw(e) {
-        if (!isDrawing) return;
+        if (!isDrawing || !isInDrawingArea) return; // ✅ Малюємо тільки в області зображення
         
         const rect = canvas.getBoundingClientRect();
         const currentX = e.clientX - rect.left;
@@ -293,7 +329,6 @@
           currentImage = img;
           showDrawingCanvas(img);
           
-          // Запускаємо звук
           try {
             if (audio) audio.pause();
             audio = new Audio(`fon/${imageNumber}.mp3`);
@@ -314,15 +349,13 @@
       }
 
       function showDrawingCanvas(img) {
-        // Показуємо канвас
         canvas.style.display = 'block';
         document.getElementById('closeDrawing').style.display = 'block';
         document.getElementById('hint').style.display = 'none';
         
-        // ✅ ОЧИЩАЄМО КАНВАС ПОВНІСТЮ ПРОЗОРИМ - без чорного фону!
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Малюємо зображення по центру
+        // ✅ РОЗРАХУНОК ПОЗИЦІЇ ТА РОЗМІРІВ ЗОБРАЖЕННЯ
         const scaleFactor = Math.min(
           canvas.width / img.width * 0.8,
           canvas.height / img.height * 0.8
@@ -333,9 +366,26 @@
         const drawX = (canvas.width - drawWidth) / 2;
         const drawY = (canvas.height - drawHeight) / 2;
         
+        // ✅ ЗБЕРІГАЄМО ОБЛАСТЬ МАЛЮВАННЯ
+        drawingArea = {
+          x: drawX,
+          y: drawY,
+          width: drawWidth,
+          height: drawHeight
+        };
+        
+        // ✅ ВІДОБРАЖАЄМО КОНТУР ОБЛАСТІ МАЛЮВАННЯ
+        const areaElement = document.getElementById('drawingArea');
+        areaElement.style.display = 'block';
+        areaElement.style.left = drawX + 'px';
+        areaElement.style.top = drawY + 'px';
+        areaElement.style.width = drawWidth + 'px';
+        areaElement.style.height = drawHeight + 'px';
+        
+        // Малюємо зображення
         ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
         
-        // Зберігаємо інформацію про позицію зображення для майбутнього використання
+        // Зберігаємо інформацію для майбутнього використання
         canvas.imageData = {
           x: drawX,
           y: drawY,
@@ -343,7 +393,7 @@
           height: drawHeight
         };
 
-        // ✅ Зберігаємо оригінальне зображення для функції очищення
+        // Зберігаємо оригінальне зображення для функції очищення
         originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       }
 
@@ -352,10 +402,30 @@
         document.getElementById('closeDrawing').style.display = 'block';
         document.getElementById('hint').style.display = 'none';
         
-        // ✅ ОЧИЩАЄМО КАНВАС ПОВНІСТЮ ПРОЗОРИМ
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Тільки текст на прозорому фоні
+        // ✅ СТВОРЮЄМО ПРОСТУ ОБЛАСТЬ ДЛЯ МАЛЮВАННЯ
+        const drawWidth = 600;
+        const drawHeight = 400;
+        const drawX = (canvas.width - drawWidth) / 2;
+        const drawY = (canvas.height - drawHeight) / 2;
+        
+        drawingArea = {
+          x: drawX,
+          y: drawY,
+          width: drawWidth,
+          height: drawHeight
+        };
+        
+        // ✅ ВІДОБРАЖАЄМО КОНТУР
+        const areaElement = document.getElementById('drawingArea');
+        areaElement.style.display = 'block';
+        areaElement.style.left = drawX + 'px';
+        areaElement.style.top = drawY + 'px';
+        areaElement.style.width = drawWidth + 'px';
+        areaElement.style.height = drawHeight + 'px';
+        
+        // Текст
         ctx.fillStyle = '#ffffff';
         ctx.font = '40px Comic Sans MS';
         ctx.textAlign = 'center';
@@ -368,6 +438,7 @@
       function closeDrawing() {
         canvas.style.display = 'none';
         document.getElementById('closeDrawing').style.display = 'none';
+        document.getElementById('drawingArea').style.display = 'none';
         document.getElementById('hint').style.display = 'block';
         
         if (audio) {
@@ -378,13 +449,28 @@
         currentImage = null;
         activeMarkerIndex = null;
         originalImageData = null;
+        isInDrawingArea = false;
       }
 
-      // ✅ ФУНКЦІЯ ОЧИЩЕННЯ КАНВАСУ
+      // ✅ ФУНКЦІЯ ОЧИЩЕННЯ КАНВАСУ (ТІЛЬКИ ОБЛАСТЬ МАЛЮВАННЯ)
       function clearCanvas() {
-        if (originalImageData) {
+        if (originalImageData && currentImage) {
+          // Відновлюємо оригінальне зображення тільки в області малювання
+          const tempCanvas = document.createElement('canvas');
+          const tempCtx = tempCanvas.getContext('2d');
+          tempCanvas.width = canvas.width;
+          tempCanvas.height = canvas.height;
+          
           // Відновлюємо оригінальне зображення
-          ctx.putImageData(originalImageData, 0, 0);
+          tempCtx.putImageData(originalImageData, 0, 0);
+          
+          // Копіюємо тільки область зображення назад на основний canvas
+          ctx.clearRect(drawingArea.x, drawingArea.y, drawingArea.width, drawingArea.height);
+          ctx.drawImage(
+            tempCanvas,
+            drawingArea.x, drawingArea.y, drawingArea.width, drawingArea.height,
+            drawingArea.x, drawingArea.y, drawingArea.width, drawingArea.height
+          );
         } else {
           // Просто очищаємо canvas
           ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -425,7 +511,6 @@
       document.querySelector('a-scene').addEventListener('loaded', function() {
         initCanvas();
         
-        // Додаємо обробники подій для маркерів
         for (let i = 0; i < 12; i++) {
           const target = document.getElementById(`target-${i}`);
           target.addEventListener('targetFound', function() {
@@ -436,7 +521,6 @@
           });
         }
 
-        // Запуск AR по кліку
         document.body.addEventListener('click', function() {
           document.getElementById('hint').textContent = 'Покажи маркер!';
           const scene = document.querySelector('a-scene');
@@ -446,7 +530,6 @@
         }, { once: true });
       });
 
-      // Кнопка закриття розмальовування
       document.getElementById('closeDrawing').addEventListener('click', closeDrawing);
     });
   </script>
