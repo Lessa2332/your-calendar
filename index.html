@@ -12,7 +12,7 @@
       background:#000; font-family:'Comic Sans MS',cursive; 
     }
     
-    /* КАНВАС ДЛЯ РОЗМАЛЬОВУВАННЯ */
+    /* КАНВАС ДЛЯ РОЗМАЛЬОВУВАННЯ - ПРОЗОРИЙ */
     #drawingCanvas {
       position: fixed;
       top: 0;
@@ -23,6 +23,7 @@
       display: none;
       cursor: crosshair;
       touch-action: none;
+      background: transparent !important; /* ✅ ПРОЗОРИЙ ФОН */
     }
     
     #hint {
@@ -132,7 +133,7 @@
 </head>
 <body>
 
-  <!-- КАНВАС ДЛЯ РОЗМАЛЬОВУВАННЯ -->
+  <!-- КАНВАС ДЛЯ РОЗМАЛЬОВУВАННЯ З ПРОЗОРИМ ФОНОМ -->
   <canvas id="drawingCanvas"></canvas>
   <button id="closeDrawing">✕</button>
   
@@ -156,6 +157,7 @@
     <div style="display:flex; gap:8px;">
       <div class="zoom-btn" onclick="zoomIn()">+</div>
       <div class="zoom-btn" onclick="zoomOut()">–</div>
+      <div class="zoom-btn" onclick="clearCanvas()" title="Очистити">C</div>
     </div>
   </div>
 
@@ -197,11 +199,15 @@
       let currentImage = null;
       let audio = null;
       let activeMarkerIndex = null;
+      let originalImageData = null;
 
       // === ІНІЦІАЛІЗАЦІЯ КАНВАСУ ===
       function initCanvas() {
         canvas = document.getElementById('drawingCanvas');
         ctx = canvas.getContext('2d');
+        
+        // ✅ Встановлюємо прозорий фон для canvas
+        canvas.style.background = 'transparent';
         
         // Встановлюємо розміри canvas
         function resizeCanvas() {
@@ -313,7 +319,7 @@
         document.getElementById('closeDrawing').style.display = 'block';
         document.getElementById('hint').style.display = 'none';
         
-        // Очищаємо канвас
+        // ✅ ОЧИЩАЄМО КАНВАС ПОВНІСТЮ ПРОЗОРИМ - без чорного фону!
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
         // Малюємо зображення по центру
@@ -336,6 +342,9 @@
           width: drawWidth,
           height: drawHeight
         };
+
+        // ✅ Зберігаємо оригінальне зображення для функції очищення
+        originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       }
 
       function createFallbackDrawing() {
@@ -343,20 +352,17 @@
         document.getElementById('closeDrawing').style.display = 'block';
         document.getElementById('hint').style.display = 'none';
         
-        // Очищаємо канвас
+        // ✅ ОЧИЩАЄМО КАНВАС ПОВНІСТЮ ПРОЗОРИМ
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Білий фон
+        // Тільки текст на прозорому фоні
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Текст
-        ctx.fillStyle = '#333333';
         ctx.font = '40px Comic Sans MS';
         ctx.textAlign = 'center';
         ctx.fillText('Малюй тут! 🎨', canvas.width / 2, canvas.height / 2);
         
         currentImage = null;
+        originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       }
 
       function closeDrawing() {
@@ -371,6 +377,18 @@
         
         currentImage = null;
         activeMarkerIndex = null;
+        originalImageData = null;
+      }
+
+      // ✅ ФУНКЦІЯ ОЧИЩЕННЯ КАНВАСУ
+      function clearCanvas() {
+        if (originalImageData) {
+          // Відновлюємо оригінальне зображення
+          ctx.putImageData(originalImageData, 0, 0);
+        } else {
+          // Просто очищаємо canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
       }
 
       // === КЕРУВАННЯ ІНТЕРФЕЙСОМ ===
@@ -397,8 +415,9 @@
         updateBrushSize();
       };
       
+      window.clearCanvas = clearCanvas;
+      
       function updateBrushSize() {
-        // Оновлюємо розмір пензля в залежності від масштабу
         document.getElementById('brushValue').textContent = Math.round(brushSize * scale);
       }
 
@@ -429,30 +448,6 @@
 
       // Кнопка закриття розмальовування
       document.getElementById('closeDrawing').addEventListener('click', closeDrawing);
-
-      // Додаткова функція для очищення canvas (опціонально)
-      function clearCanvas() {
-        if (currentImage && canvas.imageData) {
-          // Відновлюємо оригінальне зображення
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(
-            currentImage, 
-            canvas.imageData.x, 
-            canvas.imageData.y, 
-            canvas.imageData.width, 
-            canvas.imageData.height
-          );
-        } else {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }
-      }
-
-      // Додаємо кнопку очищення (опціонально)
-      const clearBtn = document.createElement('div');
-      clearBtn.className = 'zoom-btn';
-      clearBtn.textContent = 'C';
-      clearBtn.onclick = clearCanvas;
-      document.querySelector('.controls').appendChild(clearBtn);
     });
   </script>
 </body>
