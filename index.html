@@ -7,30 +7,135 @@
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   <style>
-    body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; font-family:'Comic Sans MS',cursive; }
+    body, html { 
+      margin:0; padding:0; height:100%; overflow:hidden; 
+      background:#000; font-family:'Comic Sans MS',cursive; 
+    }
+    
+    /* КАНВАС ДЛЯ РОЗМАЛЬОВУВАННЯ */
+    #drawingCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      display: none;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    
     #hint {
-      position:fixed; top:max(20px, env(safe-area-inset-top,20px)); left:50%; transform:translateX(-50%);
-      background:#ff1493; color:#fff; padding:12px 24px; border-radius:50px; font-size:clamp(16px,4vw,24px);
-      z-index:999; box-shadow:0 0 30px #ff1493; text-align:center; width:90%; max-width:400px;
+      position:fixed; 
+      top: max(20px, env(safe-area-inset-top,20px)); 
+      left:50%; 
+      transform:translateX(-50%);
+      background:#ff1493; 
+      color:#fff; 
+      padding:12px 24px; 
+      border-radius:50px; 
+      font-size:clamp(16px,4vw,24px);
+      z-index:999; 
+      box-shadow:0 0 30px #ff1493; 
+      text-align:center; 
+      width:90%; 
+      max-width:400px;
     }
+    
     .controls {
-      position:fixed; bottom:max(20px, env(safe-area-inset-bottom,20px)); left:50%; transform:translateX(-50%);
-      display:flex; gap:10px; align-items:center; z-index:1000; background:rgba(0,0,0,0.8);
-      padding:12px 16px; border-radius:25px; backdrop-filter:blur(10px); flex-wrap:wrap; justify-content:center;
+      position:fixed; 
+      bottom: max(20px, env(safe-area-inset-bottom,20px)); 
+      left:50%; 
+      transform:translateX(-50%);
+      display:flex; 
+      gap:10px; 
+      align-items:center; 
+      z-index:1000; 
+      background:rgba(0,0,0,0.8);
+      padding:12px 16px; 
+      border-radius:25px; 
+      backdrop-filter:blur(10px); 
+      flex-wrap:wrap; 
+      justify-content:center;
     }
+    
     .color-btn {
-      width:44px; height:44px; border-radius:50%; border:3px solid transparent; cursor:pointer;
-      transition:all .2s; background-size:cover;
+      width:44px; 
+      height:44px; 
+      border-radius:50%; 
+      border:3px solid transparent; 
+      cursor:pointer;
+      transition:all .2s; 
+      background-size:cover;
     }
-    .color-btn.active { border:3px solid white; transform:scale(1.2); box-shadow:0 0 20px white; }
-    .zoom-btn { width:50px; height:50px; border-radius:50%; background:#fff; color:#000; font-size:28px; font-weight:bold;
-      display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; }
-    #brushValue { color:white; font-size:18px; min-width:40px; text-align:center; }
-    input[type="range"] { width:130px; accent-color:#ff1493; }
+    
+    .color-btn.active { 
+      border:3px solid white; 
+      transform:scale(1.2); 
+      box-shadow:0 0 20px white; 
+    }
+    
+    .zoom-btn { 
+      width:50px; 
+      height:50px; 
+      border-radius:50%; 
+      background:#fff; 
+      color:#000; 
+      font-size:28px; 
+      font-weight:bold;
+      display:flex; 
+      align-items:center; 
+      justify-content:center; 
+      cursor:pointer; 
+      user-select:none; 
+    }
+    
+    #brushValue { 
+      color:white; 
+      font-size:18px; 
+      min-width:40px; 
+      text-align:center; 
+    }
+    
+    input[type="range"] { 
+      width:130px; 
+      accent-color:#ff1493; 
+    }
+    
+    #closeDrawing {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 20, 147, 0.8);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 30px;
+      cursor: pointer;
+      z-index: 101;
+      display: none;
+    }
+    
+    /* AR сцена прозора */
+    a-scene {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
 
+  <!-- КАНВАС ДЛЯ РОЗМАЛЬОВУВАННЯ -->
+  <canvas id="drawingCanvas"></canvas>
+  <button id="closeDrawing">✕</button>
+  
   <div id="hint">Натисни екран → покажи маркер → малюй!</div>
 
   <div class="controls">
@@ -54,16 +159,17 @@
     </div>
   </div>
 
+  <!-- AR СЦЕНА (ТІЛЬКИ ДЛЯ ЗАПУСКУ) -->
   <a-scene
     embedded
-    mindar-image="imageTargetSrc: calendar.mind; filterMinCF:0.0001; filterBeta:1000; warmupTolerance:5"
+    mindar-image="imageTargetSrc: calendar.mind; filterMinCF:0.0001; filterBeta:1000; warmupTolerance:5; autoStart: false;"
     renderer="antialias:true"
     vr-mode-ui="enabled:false"
     device-orientation-permission-ui="enabled:false">
 
-    <a-camera active="true"></a-camera>
+    <a-camera active="false"></a-camera>
 
-    <!-- 12 СТАТИЧНИХ цілей -->
+    <!-- 12 маркерів -->
     <a-entity mindar-image-target="targetIndex: 0" class="target" id="target-0"></a-entity>
     <a-entity mindar-image-target="targetIndex: 1" class="target" id="target-1"></a-entity>
     <a-entity mindar-image-target="targetIndex: 2" class="target" id="target-2"></a-entity>
@@ -80,193 +186,199 @@
   </a-scene>
 
   <script>
-    // Чекаємо, поки A-Frame повністю завантажиться
     document.addEventListener('DOMContentLoaded', function() {
+      // === ЗМІННІ ДЛЯ КАНВАСУ ===
       let currentColor = '#ff6961';
       let brushSize = 15;
       let scale = 1;
       let canvas, ctx;
       let isDrawing = false;
-      let lastPoint = null;
-      let activeIdx = null;
+      let lastX = 0, lastY = 0;
+      let currentImage = null;
       let audio = null;
+      let activeMarkerIndex = null;
 
-      // Реєструємо компонент для малювання
-      AFRAME.registerComponent('draw-handler', {
-        init: function () {
-          this.el.addEventListener('mousedown', () => {
-            isDrawing = true;
-            lastPoint = null;
-          });
-          this.el.addEventListener('mouseup', () => { 
-            isDrawing = false; 
-            lastPoint = null; 
-          });
-          this.el.addEventListener('mousemove', e => {
-            if (!isDrawing || !ctx || !canvas) return;
-            
-            const intersection = e.detail.intersection;
-            if (!intersection || !intersection.uv) return;
-            
-            const uv = intersection.uv;
-            const x = uv.x * canvas.width;
-            const y = (1 - uv.y) * canvas.height;
-
-            if (lastPoint) {
-              ctx.strokeStyle = currentColor;
-              ctx.lineWidth = brushSize;
-              ctx.lineCap = 'round';
-              ctx.lineJoin = 'round';
-              ctx.beginPath();
-              ctx.moveTo(lastPoint.x, lastPoint.y);
-              ctx.lineTo(x, y);
-              ctx.stroke();
-              
-              // Оновлюємо текстуру
-              this.el.setAttribute('material', 'src', canvas.toDataURL());
-            }
-            lastPoint = { x, y };
-          });
-        }
-      });
-
-      // Обробники подій для цілей
-      document.querySelector('a-scene').addEventListener('targetFound', e => {
-        const target = e.target;
-        const targetAttr = target.getAttribute('mindar-image-target');
-        if (!targetAttr) return;
-        
-        const idx = targetAttr.targetIndex;
-        if (activeIdx === idx) return;
-        
-        clearAll();
-        activeIdx = idx;
-        loadContent(idx);
-        document.getElementById('hint').textContent = 'Малюй!';
-      });
-
-      document.querySelector('a-scene').addEventListener('targetLost', e => {
-        const target = e.target;
-        const targetAttr = target.getAttribute('mindar-image-target');
-        if (!targetAttr) return;
-        
-        const idx = targetAttr.targetIndex;
-        if (activeIdx === idx) {
-          clearAll();
-        }
-      });
-
-      function clearAll() {
-        document.querySelectorAll('a-plane.draw').forEach(p => p.remove());
-        if (audio) { 
-          audio.pause(); 
-          audio = null; 
-        }
-        canvas = null;
-        ctx = null;
-        scale = 1;
-        activeIdx = null;
-        isDrawing = false;
-        lastPoint = null;
-      }
-
-      function loadContent(idx) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => createDrawingPlane(img, idx);
-        img.onerror = () => createFallback(idx);
-        
-        // ВИПРАВЛЕНІ ШЛЯХИ - відповідно до структури репозиторія
-        const imageNumber = String(idx + 1).padStart(2, '0');
-        img.src = `images/${imageNumber}.jpg?t=${Date.now()}`;
-
-        // Аудіо - виправлені шляхи
-        try {
-          if (audio) audio.pause();
-          audio = new Audio(`fon/${imageNumber}.mp3`);
-          audio.loop = true;
-          audio.play().catch(e => {
-            console.log('Аудіо не може бути відтворене:', e);
-          });
-        } catch (e) {
-          console.log('Помилка створення аудіо:', e);
-        }
-      }
-
-      function createDrawingPlane(img, idx) {
-        const targetElement = document.querySelector(`a-entity[targetIndex="${idx}"]`);
-        if (!targetElement) {
-          console.error(`Ціль з індексом ${idx} не знайдена`);
-          return;
-        }
-
-        // Очищаємо попередні елементи
-        targetElement.querySelectorAll('a-plane.draw').forEach(el => el.remove());
-
-        canvas = document.createElement('canvas');
-        canvas.width = 1024;
-        canvas.height = 1024 * (img.height / img.width);
+      // === ІНІЦІАЛІЗАЦІЯ КАНВАСУ ===
+      function initCanvas() {
+        canvas = document.getElementById('drawingCanvas');
         ctx = canvas.getContext('2d');
         
-        // Заповнюємо білим фоном
+        // Встановлюємо розміри canvas
+        function resizeCanvas() {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
+        
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Обробники подій для малювання
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
+      }
+
+      function handleTouchStart(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+      }
+
+      function handleTouchMove(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+      }
+
+      function startDrawing(e) {
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        lastX = e.clientX - rect.left;
+        lastY = e.clientY - rect.top;
+      }
+
+      function draw(e) {
+        if (!isDrawing) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        const currentX = e.clientX - rect.left;
+        const currentY = e.clientY - rect.top;
+        
+        // Налаштування пензля
+        ctx.strokeStyle = currentColor;
+        ctx.lineWidth = brushSize * scale;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        // Малюємо лінію
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(currentX, currentY);
+        ctx.stroke();
+        
+        lastX = currentX;
+        lastY = currentY;
+      }
+
+      function stopDrawing() {
+        isDrawing = false;
+      }
+
+      // === ЗАВАНТАЖЕННЯ ТА ВІДОБРАЖЕННЯ ЗОБРАЖЕННЯ ===
+      function loadImageForDrawing(index) {
+        const imageNumber = String(index + 1).padStart(2, '0');
+        const imageUrl = `images/${imageNumber}.jpg?t=${Date.now()}`;
+        
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = function() {
+          currentImage = img;
+          showDrawingCanvas(img);
+          
+          // Запускаємо звук
+          try {
+            if (audio) audio.pause();
+            audio = new Audio(`fon/${imageNumber}.mp3`);
+            audio.loop = true;
+            audio.play().catch(e => {
+              console.log('🔇 Аудіо не може бути відтворене');
+            });
+          } catch (e) {
+            console.log('Помилка створення аудіо');
+          }
+        };
+        
+        img.onerror = function() {
+          createFallbackDrawing();
+        };
+        
+        img.src = imageUrl;
+      }
+
+      function showDrawingCanvas(img) {
+        // Показуємо канвас
+        canvas.style.display = 'block';
+        document.getElementById('closeDrawing').style.display = 'block';
+        document.getElementById('hint').style.display = 'none';
+        
+        // Очищаємо канвас
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Малюємо зображення по центру
+        const scaleFactor = Math.min(
+          canvas.width / img.width * 0.8,
+          canvas.height / img.height * 0.8
+        );
+        
+        const drawWidth = img.width * scaleFactor;
+        const drawHeight = img.height * scaleFactor;
+        const drawX = (canvas.width - drawWidth) / 2;
+        const drawY = (canvas.height - drawHeight) / 2;
+        
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        
+        // Зберігаємо інформацію про позицію зображення для майбутнього використання
+        canvas.imageData = {
+          x: drawX,
+          y: drawY,
+          width: drawWidth,
+          height: drawHeight
+        };
+      }
+
+      function createFallbackDrawing() {
+        canvas.style.display = 'block';
+        document.getElementById('closeDrawing').style.display = 'block';
+        document.getElementById('hint').style.display = 'none';
+        
+        // Очищаємо канвас
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Білий фон
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Малюємо зображення
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        const plane = document.createElement('a-plane');
-        plane.classList.add('draw', 'draw-surface');
-        plane.setAttribute('position', '0 0 0.01');
-        plane.setAttribute('width', '0.6');
-        plane.setAttribute('height', 0.6 * (canvas.height / canvas.width));
-        plane.setAttribute('material', {
-          src: canvas.toDataURL(),
-          transparent: true,
-          alphaTest: 0.5
-        });
-        plane.setAttribute('draw-handler', '');
-
-        targetElement.appendChild(plane);
-      }
-
-      function createFallback(idx) {
-        const targetElement = document.querySelector(`a-entity[targetIndex="${idx}"]`);
-        if (!targetElement) return;
-
-        canvas = document.createElement('canvas');
-        canvas.width = 800; 
-        canvas.height = 600;
-        ctx = canvas.getContext('2d');
-        
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, 800, 600);
-        ctx.fillStyle = '#333333'; 
-        ctx.font = '40px Arial'; 
+        // Текст
+        ctx.fillStyle = '#333333';
+        ctx.font = '40px Comic Sans MS';
         ctx.textAlign = 'center';
-        ctx.fillText('Малюй тут!', 400, 300);
-
-        const plane = document.createElement('a-plane');
-        plane.classList.add('draw', 'draw-surface');
-        plane.setAttribute('position', '0 0 0.01');
-        plane.setAttribute('width', '0.6'); 
-        plane.setAttribute('height', '0.45');
-        plane.setAttribute('material', {
-          src: canvas.toDataURL(),
-          transparent: true,
-          alphaTest: 0.5
-        });
-        plane.setAttribute('draw-handler', '');
-
-        targetElement.appendChild(plane);
+        ctx.fillText('Малюй тут! 🎨', canvas.width / 2, canvas.height / 2);
+        
+        currentImage = null;
       }
 
-      // Кольори, розмір, зум
-      document.querySelectorAll('.color-btn').forEach(b => {
-        b.addEventListener('click', () => {
+      function closeDrawing() {
+        canvas.style.display = 'none';
+        document.getElementById('closeDrawing').style.display = 'none';
+        document.getElementById('hint').style.display = 'block';
+        
+        if (audio) {
+          audio.pause();
+          audio = null;
+        }
+        
+        currentImage = null;
+        activeMarkerIndex = null;
+      }
+
+      // === КЕРУВАННЯ ІНТЕРФЕЙСОМ ===
+      document.querySelectorAll('.color-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
           document.querySelector('.color-btn.active').classList.remove('active');
-          b.classList.add('active');
-          currentColor = b.dataset.color;
+          btn.classList.add('active');
+          currentColor = btn.dataset.color;
         });
       });
 
@@ -277,31 +389,71 @@
 
       window.zoomIn = () => { 
         scale = Math.min(3, scale + 0.3); 
-        updateZoom(); 
+        updateBrushSize();
       };
       
       window.zoomOut = () => { 
         scale = Math.max(0.7, scale - 0.3); 
-        updateZoom(); 
+        updateBrushSize();
       };
       
-      function updateZoom() {
-        const plane = document.querySelector('a-plane.draw');
-        if (plane) {
-          plane.setAttribute('scale', `${scale} ${scale} 1`);
+      function updateBrushSize() {
+        // Оновлюємо розмір пензля в залежності від масштабу
+        document.getElementById('brushValue').textContent = Math.round(brushSize * scale);
+      }
+
+      // === AR МАРКЕРИ ===
+      document.querySelector('a-scene').addEventListener('loaded', function() {
+        initCanvas();
+        
+        // Додаємо обробники подій для маркерів
+        for (let i = 0; i < 12; i++) {
+          const target = document.getElementById(`target-${i}`);
+          target.addEventListener('targetFound', function() {
+            if (!canvas || canvas.style.display === 'none') {
+              activeMarkerIndex = i;
+              loadImageForDrawing(i);
+            }
+          });
+        }
+
+        // Запуск AR по кліку
+        document.body.addEventListener('click', function() {
+          document.getElementById('hint').textContent = 'Покажи маркер!';
+          const scene = document.querySelector('a-scene');
+          if (scene && scene.systems['mindar-image-system']) {
+            scene.systems['mindar-image-system'].start();
+          }
+        }, { once: true });
+      });
+
+      // Кнопка закриття розмальовування
+      document.getElementById('closeDrawing').addEventListener('click', closeDrawing);
+
+      // Додаткова функція для очищення canvas (опціонально)
+      function clearCanvas() {
+        if (currentImage && canvas.imageData) {
+          // Відновлюємо оригінальне зображення
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(
+            currentImage, 
+            canvas.imageData.x, 
+            canvas.imageData.y, 
+            canvas.imageData.width, 
+            canvas.imageData.height
+          );
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
       }
 
-      // Старт після кліку
-      document.body.addEventListener('click', () => {
-        document.getElementById('hint').textContent = 'Покажи маркер!';
-        const scene = document.querySelector('a-scene');
-        if (scene && scene.systems['mindar-image-system']) {
-          scene.systems['mindar-image-system'].start();
-        }
-      }, { once: true });
+      // Додаємо кнопку очищення (опціонально)
+      const clearBtn = document.createElement('div');
+      clearBtn.className = 'zoom-btn';
+      clearBtn.textContent = 'C';
+      clearBtn.onclick = clearCanvas;
+      document.querySelector('.controls').appendChild(clearBtn);
     });
   </script>
 </body>
 </html>
-
