@@ -538,8 +538,23 @@
       document.getElementById('closeBtn').style.display = 'none';
       document.getElementById('hintTextOnPuzzle').style.display = 'none';
       document.getElementById('currentColorIndicator').style.display = 'none';
-      document.getElementById('imageLoading').style.display = 'none'; // КРИТИЧНО: ховаємо лоадер
+      document.getElementById('imageLoading').style.display = 'none';
       debugLog('UI розмальовки приховано');
+    }
+
+    function showColoringUI() {
+      // КРИТИЧНО: ховаємо екран підказки перед показом UI розмальовки
+      document.getElementById('hintScreen').style.display = 'none';
+      
+      document.getElementById('coloringCanvas').style.display = 'block';
+      document.getElementById('colorPalette').style.display = 'block';
+      document.getElementById('brushSliderContainer').style.display = 'block';
+      document.getElementById('screenshotBtn').style.display = 'block';
+      document.getElementById('closeBtn').style.display = 'block';
+      document.getElementById('hintTextOnPuzzle').style.display = 'block';
+      document.getElementById('currentColorIndicator').style.display = 'block';
+      
+      debugLog('UI розмальовки показано');
     }
 
     class ColoringApp {
@@ -752,7 +767,8 @@
         hideColoringUI();
         currentColoring = null;
         currentMarkerId = null;
-        screens.show('hint');
+        // Показуємо екран підказки при закритті
+        document.getElementById('hintScreen').style.display = 'flex';
       };
     }
 
@@ -849,21 +865,13 @@
               savedImg.src = saved;
             }
 
-            // Показуємо UI
-            document.getElementById('coloringCanvas').style.display = 'block';
-            document.getElementById('colorPalette').style.display = 'block';
-            document.getElementById('brushSliderContainer').style.display = 'block';
-            document.getElementById('screenshotBtn').style.display = 'block';
-            document.getElementById('closeBtn').style.display = 'block';
-            document.getElementById('hintTextOnPuzzle').style.display = 'block';
-            document.getElementById('currentColorIndicator').style.display = 'block';
+            // КРИТИЧНО: показуємо UI розмальовки та ховаємо екран підказки
+            showColoringUI();
             
             showMessage(isUA ? 
               'Малюй пальчиком! Зберігай 📸' : 
               'Draw with your finger! Save 📸'
             );
-            
-            debugLog('UI розмальовки показано');
             
           } catch (error) {
             console.error('Помилка завантаження зображення:', error);
@@ -885,6 +893,8 @@
             hideColoringUI();
             currentColoring = null;
             currentMarkerId = null;
+            // Показуємо екран підказки при втраті маркера
+            document.getElementById('hintScreen').style.display = 'flex';
           }
         });
 
