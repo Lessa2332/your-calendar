@@ -191,7 +191,7 @@
       display: none;
     }
     
-    /* Компактна палітра кольорів з повзунком */
+    /* Компактна палітра кольорів */
     #colorPalette {
       position: fixed;
       bottom: 100px;
@@ -224,7 +224,7 @@
       flex-shrink: 0;
     }
     
-    /* Слайдер товщини пензля - компактний */
+    /* Слайдер товщини пензля */
     #brushSliderContainer {
       position: fixed;
       bottom: 60px;
@@ -302,89 +302,6 @@
       line-height: 1.4;
       max-width: 90%;
     }
-    
-    /* Адаптація для маленьких екранів */
-    @media (max-height: 600px) {
-      #colorPalette {
-        bottom: 80px;
-        padding: 8px;
-      }
-      
-      .colorBtn {
-        width: 35px;
-        height: 35px;
-        min-width: 35px;
-      }
-      
-      #brushSliderContainer {
-        bottom: 50px;
-      }
-      
-      #currentColorIndicator {
-        bottom: 140px;
-        width: 25px;
-        height: 25px;
-      }
-    }
-    
-    /* Адаптація для горизонтальної орієнтації */
-    @media (max-height: 500px) and (orientation: landscape) {
-      .screen {
-        padding: 10px;
-        justify-content: flex-start;
-        overflow-y: auto;
-      }
-      
-      #colorPalette {
-        bottom: 60px;
-      }
-      
-      #brushSliderContainer {
-        bottom: 40px;
-      }
-      
-      #screenshotBtn {
-        bottom: 10px;
-      }
-      
-      #currentColorIndicator {
-        bottom: 110px;
-      }
-    }
-    
-    /* Покращення для планшетів */
-    @media (min-width: 768px) {
-      .colorBtn {
-        width: 45px;
-        height: 45px;
-        min-width: 45px;
-      }
-      
-      #colorPalette {
-        left: 20px;
-        right: 20px;
-        bottom: 110px;
-      }
-    }
-    
-    /* Стилізація скроллбару для палітри */
-    #colorPalette::-webkit-scrollbar {
-      height: 6px;
-    }
-    
-    #colorPalette::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 3px;
-    }
-    
-    #colorPalette::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 3px;
-    }
-    
-    #colorPalette::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.5);
-    }
   </style>
 </head>
 <body>
@@ -445,7 +362,7 @@
       image: `images/${String(i+1).padStart(2,'0')}.jpg`
     }));
 
-    // 32 кольори — яскраві, дитячі
+    // 32 кольори
     const COLORS = [
       '#FF0000','#FFA500','#FFFF00','#008000','#0000FF','#4B0082','#EE82EE',
       '#FF69B4','#FF1493','#FFC0CB','#FFD700','#FF8C00','#FF4500','#A52A2A',
@@ -531,6 +448,11 @@
           this.ctx.imageSmoothingEnabled = true;
           this.ctx.imageSmoothingQuality = 'high';
           
+          // ВАЖЛИВО: Встановлюємо прозорий фон для canvas
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+          this.ctx.fillStyle = 'transparent';
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+          
           this.redraw();
         };
         
@@ -569,7 +491,7 @@
           x = (w - drawW) / 2;
           y = (h - drawH) / 2;
           
-          // Малюємо зображення
+          // Малюємо оригінальне чорно-біле зображення
           this.ctx.drawImage(this.image, x, y, drawW, drawH);
         }
       }
@@ -622,6 +544,7 @@
           this.ctx.lineCap = 'round';
           this.ctx.lineJoin = 'round';
           this.ctx.strokeStyle = brushColor;
+          this.ctx.globalCompositeOperation = 'source-over'; // Малюємо поверх зображення
           
           // Малюємо лінію
           this.ctx.lineTo(currentX, currentY);
@@ -694,10 +617,20 @@
       document.getElementById('screenshotBtn').onclick = () => {
         if (!currentColoring) return;
         
+        // ВАЖЛИВО: Створюємо новий canvas для експорту
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = currentColoring.canvas.width;
+        exportCanvas.height = currentColoring.canvas.height;
+        const exportCtx = exportCanvas.getContext('2d');
+        
+        // Копіюємо вміст оригінального canvas
+        exportCtx.drawImage(currentColoring.canvas, 0, 0);
+        
         const link = document.createElement('a');
         link.download = `magic-coloring-${currentMarkerId + 1}.png`;
-        link.href = currentColoring.canvas.toDataURL('image/png');
+        link.href = exportCanvas.toDataURL('image/png');
         link.click();
+        
         showMessage(isUA ? '📸 Знімок збережено!' : '📸 Screenshot saved!');
         saveDrawing(currentMarkerId);
       };
@@ -798,7 +731,8 @@
             if (saved) {
               const savedImg = new Image();
               savedImg.onload = () => {
-                currentColoring.ctx.drawImage(savedImg, 0, 0, currentColoring.canvas.width, currentColoring.canvas.height);
+                // Малюємо збережене поверх оригінального зображення
+                currentColoring.ctx.drawImage(savedImg, 0, 0);
               };
               savedImg.src = saved;
             }
