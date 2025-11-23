@@ -11,118 +11,224 @@
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
-    *,*::before,*::after{box-sizing:border-box}
-    body,html{
-      margin:0;padding:0;width:100%;height:100%;overflow:hidden;
-      background:transparent !important;
-      font-family:'Comic Sans MS',cursive,sans-serif;
-      touch-action:none;-webkit-tap-highlight-color:transparent;
+    *, *::before, *::after {
+      box-sizing: border-box;
     }
-    a-scene{
-      position:fixed;inset:0;background:transparent !important;
+    
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent !important;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    a-scene {
+      position: fixed;
+      inset: 0;
+      background: transparent !important;
       pointer-events: none;
+      z-index: 1;
     }
-    #coloringCanvas{
-      position:fixed;inset:0;z-index:100;background:transparent;
+    
+    #coloringCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: transparent;
       pointer-events: auto;
       display: none;
     }
-    #closeBtn{
-      position:fixed;top:max(15px,env(safe-area-inset-top,15px));right:15px;
-      width:60px;height:60px;background:#ff1493;color:white;border:none;
-      border-radius:50%;font-size:32px;z-index:1002;box-shadow:0 0 30px #ff1493;
-      cursor:pointer;display:none;
+    
+    #closeBtn {
+      position: fixed;
+      top: max(15px, env(safe-area-inset-top, 15px));
+      right: 15px;
+      width: 50px;
+      height: 50px;
+      background: #ff1493;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      font-size: 24px;
+      font-weight: bold;
+      z-index: 1002;
+      box-shadow: 0 0 20px #ff1493;
+      cursor: pointer;
+      display: none;
     }
-    .screen{
-      position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
-      flex-direction:column;color:white;z-index:1001;text-align:center;
-      background:rgba(0,0,0,0.85);
-      padding:20px;
+    
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      color: white;
+      z-index: 1001;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 20px;
     }
-    #startScreen{
-      background:radial-gradient(circle at center,rgba(255,20,147,0.7),transparent);
+    
+    #startScreen {
+      background: radial-gradient(circle at center, rgba(255, 20, 147, 0.7), transparent);
     }
-    button{
-      background:#ff1493;color:white;border:none;padding:18px 45px;
-      border-radius:50px;font-size:30px;cursor:pointer;
-      box-shadow:0 0 50px #ff1493;margin:15px;transition:.3s;
-      min-height: 60px;
+    
+    button {
+      background: #ff1493;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 50px;
+      font-size: clamp(18px, 4vw, 24px);
+      cursor: pointer;
+      box-shadow: 0 0 20px #ff1493;
+      margin: 10px;
+      transition: transform 0.3s;
+      min-height: 50px;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
     }
-    button:active{transform:scale(0.95)}
-
-    #hintTextOnPuzzle{
-      position:fixed;top:10px;left:10px;right:10px;color:white;font-weight:bold;
-      text-align:center;z-index:1002;font-size:clamp(16px,4vw,24px);
-      text-shadow:2px 2px 8px rgba(0,0,0,0.8);pointer-events:none;display:none;
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
+    
+    button:active {
+      transform: scale(0.95);
+    }
+    
+    #hintTextOnPuzzle {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      z-index: 1002;
+      font-size: clamp(14px, 3.5vw, 20px);
+      text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.8);
+      pointer-events: none;
+      display: none;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 12px;
       border-radius: 10px;
     }
-
-    #langBtn{
-      position:fixed;top:max(15px,env(safe-area-inset-top,15px));left:15px;
-      background:#ff1493;color:white;border:none;padding:12px 18px;
-      border-radius:30px;font-size:18px;font-weight:bold;z-index:1002;
-      box-shadow:0 0 20px #ff1493;cursor:pointer;min-height: 44px;
+    
+    #langBtn {
+      position: fixed;
+      top: max(15px, env(safe-area-inset-top, 15px));
+      left: 15px;
+      background: #ff1493;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 30px;
+      font-size: 16px;
+      font-weight: bold;
+      z-index: 1002;
+      box-shadow: 0 0 15px #ff1493;
+      cursor: pointer;
+      min-height: 40px;
     }
-
-    #soundBtn{
-      position:fixed;bottom:max(20px,env(safe-area-inset-bottom,20px));right:20px;
-      background:rgba(255,20,147,0.7);color:white;border:none;padding:15px;
-      border-radius:50%;font-size:28px;z-index:1002;cursor:pointer;
-      box-shadow:0 0 20px #ff1493;min-width: 50px; min-height: 50px;
+    
+    #soundBtn {
+      position: fixed;
+      bottom: max(20px, env(safe-area-inset-bottom, 20px));
+      right: 20px;
+      background: rgba(255, 20, 147, 0.7);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 50%;
+      font-size: 20px;
+      z-index: 1002;
+      cursor: pointer;
+      box-shadow: 0 0 15px #ff1493;
+      min-width: 44px;
+      min-height: 44px;
     }
-
-    #etsyBtn{
-      position:fixed;bottom:max(20px,env(safe-area-inset-bottom,20px));left:20px;
-      background:#f16521;color:white;border:none;padding:12px 20px;
-      border-radius:30px;font-size:16px;font-weight:bold;z-index:1002;
-      box-shadow:0 0 20px #f16521;cursor:pointer;min-height: 44px;
+    
+    #etsyBtn {
+      position: fixed;
+      bottom: max(20px, env(safe-area-inset-bottom, 20px));
+      left: 20px;
+      background: #f16521;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 1002;
+      box-shadow: 0 0 15px #f16521;
+      cursor: pointer;
+      min-height: 40px;
       text-decoration: none;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       font-family: 'Comic Sans MS', cursive, sans-serif;
     }
-    #etsyBtn::before { content: "🛍️"; font-size: 20px; }
-
+    
+    #etsyBtn::before {
+      content: "🛍️";
+      font-size: 16px;
+    }
+    
     #loadingIndicator {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       color: white;
-      font-size: 24px;
+      font-size: clamp(18px, 4vw, 22px);
       z-index: 1003;
-      background: rgba(0,0,0,0.8);
-      padding: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px 20px;
       border-radius: 15px;
       display: none;
     }
-
+    
     .store-link {
       background: #f16521;
       color: white;
       text-decoration: none;
-      padding: 15px 30px;
+      padding: 12px 25px;
       border-radius: 50px;
-      font-size: 20px;
-      margin: 10px;
+      font-size: clamp(16px, 3.5vw, 18px);
+      margin: 8px;
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      box-shadow: 0 0 30px #f16521;
+      gap: 8px;
+      box-shadow: 0 0 20px #f16521;
       transition: transform 0.3s;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
     }
-    .store-link:hover { transform: scale(1.05); }
-    .store-link::before { content: "🛍️"; font-size: 24px; }
-
-    .store-text { font-size: 18px; margin: 15px 0; opacity: 0.9; }
-
+    
+    .store-link:hover {
+      transform: scale(1.05);
+    }
+    
+    .store-link::before {
+      content: "🛍️";
+      font-size: 18px;
+    }
+    
+    .store-text {
+      font-size: clamp(14px, 3.5vw, 16px);
+      margin: 10px 0;
+      opacity: 0.9;
+      text-align: center;
+      max-width: 90%;
+    }
+    
     /* Палітра — 32 кольори */
     #colorPalette {
       position: fixed;
-      bottom: 180px;
+      bottom: 140px;
       left: 50%;
       transform: translateX(-50%);
       display: none;
@@ -130,76 +236,155 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       max-width: 95%;
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 20px;
     }
-
+    
     .colorBtn {
-      width: 48px;
-      height: 48px;
+      width: clamp(30px, 8vw, 40px);
+      height: clamp(30px, 8vw, 40px);
       border-radius: 50%;
       border: 2px solid white;
-      box-shadow: 0 0 8px rgba(0,0,0,0.3);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
       cursor: pointer;
     }
-
+    
     /* Слайдер товщини пензля */
     #brushSliderContainer {
       position: fixed;
-      bottom: 120px;
+      bottom: 90px;
       left: 50%;
       transform: translateX(-50%);
       width: 80%;
-      max-width: 400px;
+      max-width: 350px;
       display: none;
       z-index: 1002;
-      background: rgba(0,0,0,0.5);
-      padding: 10px;
-      border-radius: 20px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 12px;
+      border-radius: 15px;
       text-align: center;
       color: white;
       font-weight: bold;
+      font-size: clamp(14px, 3.5vw, 16px);
     }
-
+    
     #brushSlider {
       width: 100%;
       margin-top: 5px;
     }
-
+    
     /* Кнопка скріншота */
     #screenshotBtn {
       position: fixed;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      width: 60px;
-      height: 60px;
-      background: rgba(34,139,34,0.8);
+      width: 50px;
+      height: 50px;
+      background: rgba(34, 139, 34, 0.8);
       color: white;
       border: none;
       border-radius: 50%;
-      font-size: 24px;
+      font-size: 20px;
       z-index: 1003;
-      box-shadow: 0 0 20px rgba(34,139,34,0.6);
+      box-shadow: 0 0 15px rgba(34, 139, 34, 0.6);
       cursor: pointer;
       display: none;
+    }
+    
+    h1 {
+      font-size: clamp(24px, 8vw, 36px);
+      margin: 10px 0;
+      text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+    }
+    
+    h2 {
+      font-size: clamp(20px, 6vw, 28px);
+      margin: 10px 0;
+      text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
+    }
+    
+    p {
+      font-size: clamp(14px, 4vw, 18px);
+      margin: 8px 0;
+      line-height: 1.4;
+      max-width: 90%;
+    }
+    
+    /* Адаптація для дуже маленьких екранів */
+    @media (max-height: 600px) {
+      #colorPalette {
+        bottom: 120px;
+        gap: 4px;
+      }
+      
+      #brushSliderContainer {
+        bottom: 80px;
+      }
+      
+      .colorBtn {
+        width: 28px;
+        height: 28px;
+      }
+    }
+    
+    /* Адаптація для горизонтальної орієнтації */
+    @media (max-height: 500px) and (orientation: landscape) {
+      .screen {
+        padding: 10px;
+        justify-content: flex-start;
+        overflow-y: auto;
+      }
+      
+      #colorPalette {
+        bottom: 100px;
+      }
+      
+      #brushSliderContainer {
+        bottom: 60px;
+      }
+      
+      #screenshotBtn {
+        bottom: 10px;
+      }
+    }
+    
+    /* Покращення для планшетів */
+    @media (min-width: 768px) {
+      .colorBtn {
+        width: 44px;
+        height: 44px;
+      }
+      
+      button {
+        padding: 18px 35px;
+        font-size: 20px;
+      }
+      
+      .store-link {
+        padding: 15px 30px;
+        font-size: 18px;
+      }
     }
   </style>
 </head>
 <body>
 
   <canvas id="coloringCanvas"></canvas>
-  <button id="closeBtn">X</button>
+  <button id="closeBtn">✕</button>
   <div id="hintTextOnPuzzle"></div>
   <div id="loadingIndicator">Loading...</div>
 
   <button id="langBtn">UA</button>
-  <button id="soundBtn">On</button>
+  <button id="soundBtn">🔈</button>
   <a href="https://smartlessa.etsy.com" target="_blank" id="etsyBtn" style="display:none">Our Store</a>
 
   <div id="colorPalette"></div>
   <div id="brushSliderContainer">
-    <div data-en="Brush Size" data-ua="Товщина пензля">Товщина пензля</div>
+    <div data-en="Brush Size" data-ua="Товщина пензля">Brush Size</div>
     <input type="range" id="brushSlider" min="2" max="50" value="12">
   </div>
   <button id="screenshotBtn">📷</button>
@@ -234,7 +419,7 @@
   </div>
 
   <audio id="bgMusic" loop preload="auto">
-    <source src="fon1.mp3" type="audio/mp3">
+    <source src="fon/fon1.mp3" type="audio/mp3">
   </audio>
 
   <a-scene embedded
@@ -277,7 +462,11 @@
     let soundOn = false;
 
     function playMusic() {
-      if (soundOn && music.paused) music.play().catch(() => {});
+      if (soundOn && music.paused) {
+        music.play().catch(e => {
+          console.log('Audio play failed:', e);
+        });
+      }
     }
 
     function setLanguage(ua) {
@@ -316,6 +505,8 @@
         this.ctx = this.canvas.getContext('2d', { alpha: true });
         this.image = null;
         this.isDrawing = false;
+        this.lastX = 0;
+        this.lastY = 0;
         this.setupCanvas();
         this.setupEvents();
       }
@@ -361,83 +552,152 @@
       }
 
       setupEvents() {
+        const getCoords = (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          const scaleX = this.canvas.width / rect.width;
+          const scaleY = this.canvas.height / rect.height;
+          
+          let clientX, clientY;
+          if (e.touches) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+          } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+          }
+          
+          return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+          };
+        };
+
         const start = (e) => {
           this.isDrawing = true;
-          const rect = this.canvas.getBoundingClientRect();
-          const x = (e.clientX || e.touches?.[0].clientX) - rect.left;
-          const y = (e.clientY || e.touches?.[0].clientY) - rect.top;
-          this.ctx.beginPath();
-          this.ctx.moveTo(x, y);
+          const coords = getCoords(e);
+          this.lastX = coords.x;
+          this.lastY = coords.y;
+          
+          // Запобігаємо скролу на мобільних пристроях
+          if (e.type.includes('touch')) {
+            e.preventDefault();
+          }
         };
 
-        const move = (e) => {
+        const draw = (e) => {
           if (!this.isDrawing) return;
-          const rect = this.canvas.getBoundingClientRect();
-          const x = (e.clientX || e.touches?.[0].clientX) - rect.left;
-          const y = (e.clientY || e.touches?.[0].clientY) - rect.top;
+          
+          const coords = getCoords(e);
+          const currentX = coords.x;
+          const currentY = coords.y;
+          
+          this.ctx.beginPath();
+          this.ctx.moveTo(this.lastX, this.lastY);
+          this.ctx.lineTo(currentX, currentY);
+          this.ctx.strokeStyle = brushColor;
           this.ctx.lineWidth = brushSize;
           this.ctx.lineCap = 'round';
-          this.ctx.strokeStyle = brushColor;
-          this.ctx.lineTo(x, y);
+          this.ctx.lineJoin = 'round';
           this.ctx.stroke();
+          
+          this.lastX = currentX;
+          this.lastY = currentY;
+          
+          // Запобігаємо скролу на мобільних пристроях
+          if (e.type.includes('touch')) {
+            e.preventDefault();
+          }
         };
 
-        const stop = () => { this.isDrawing = false; };
+        const stop = () => {
+          this.isDrawing = false;
+        };
 
-        const c = this.canvas;
-        ['mousedown', 'touchstart'].forEach(e => c.addEventListener(e, start, { passive: false }));
-        ['mousemove', 'touchmove'].forEach(e => c.addEventListener(e, move, { passive: false }));
-        ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(e => c.addEventListener(e, stop));
+        // Додаємо обробники подій
+        this.canvas.addEventListener('mousedown', start);
+        this.canvas.addEventListener('mousemove', draw);
+        this.canvas.addEventListener('mouseup', stop);
+        this.canvas.addEventListener('mouseout', stop);
+        
+        this.canvas.addEventListener('touchstart', start, { passive: false });
+        this.canvas.addEventListener('touchmove', draw, { passive: false });
+        this.canvas.addEventListener('touchend', stop);
+        this.canvas.addEventListener('touchcancel', stop);
       }
     }
 
     // Ініціалізація UI
-    const palette = document.getElementById('colorPalette');
-    COLORS.forEach(c => {
-      const btn = document.createElement('button');
-      btn.className = 'colorBtn';
-      btn.style.background = c;
-      btn.onclick = () => { brushColor = c; };
-      palette.appendChild(btn);
-    });
+    function initUI() {
+      const palette = document.getElementById('colorPalette');
+      palette.innerHTML = '';
+      
+      COLORS.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'colorBtn';
+        btn.style.background = c;
+        btn.onclick = () => { 
+          brushColor = c; 
+          // Додаємо візуальний індикатор вибраного кольору
+          document.querySelectorAll('.colorBtn').forEach(b => {
+            b.style.boxShadow = '0 0 5px rgba(0, 0, 0, 0.3)';
+          });
+          btn.style.boxShadow = '0 0 0 3px white, 0 0 10px ' + c;
+        };
+        palette.appendChild(btn);
+      });
+      
+      // Вибираємо перший колір за замовчуванням
+      if (palette.firstChild) {
+        palette.firstChild.style.boxShadow = '0 0 0 3px white, 0 0 10px ' + COLORS[0];
+      }
 
-    document.getElementById('brushSlider').oninput = (e) => {
-      brushSize = parseInt(e.target.value);
-    };
+      document.getElementById('brushSlider').oninput = (e) => {
+        brushSize = parseInt(e.target.value);
+      };
 
-    document.getElementById('langBtn').onclick = () => setLanguage(!isUA);
-    
-    document.getElementById('soundBtn').onclick = () => {
-      soundOn = !soundOn;
-      if (soundOn) music.play().catch(() => {});
-      else music.pause();
-      document.getElementById('soundBtn').textContent = soundOn ? 'On' : 'Off';
-    };
+      document.getElementById('langBtn').onclick = () => setLanguage(!isUA);
+      
+      document.getElementById('soundBtn').onclick = () => {
+        soundOn = !soundOn;
+        if (soundOn) {
+          playMusic();
+          document.getElementById('soundBtn').textContent = '🔊';
+        } else {
+          music.pause();
+          document.getElementById('soundBtn').textContent = '🔈';
+        }
+      };
 
-    document.getElementById('screenshotBtn').onclick = () => {
-      const link = document.createElement('a');
-      link.download = `magic-coloring-${currentMarkerId + 1}.png`;
-      link.href = currentColoring.canvas.toDataURL('image/png');
-      link.click();
-      showMessage(isUA ? '📸 Знімок збережено!' : '📸 Screenshot saved!');
-      saveDrawing(currentMarkerId);
-    };
+      document.getElementById('screenshotBtn').onclick = () => {
+        if (!currentColoring) return;
+        
+        const link = document.createElement('a');
+        link.download = `magic-coloring-${currentMarkerId + 1}.png`;
+        link.href = currentColoring.canvas.toDataURL('image/png');
+        link.click();
+        showMessage(isUA ? '📸 Знімок збережено!' : '📸 Screenshot saved!');
+        saveDrawing(currentMarkerId);
+      };
 
-    document.getElementById('closeBtn').onclick = () => {
-      // Зберігаємо
-      saveDrawing(currentMarkerId);
-      // Ховаємо UI розмальовки
-      document.getElementById('coloringCanvas').style.display = 'none';
-      document.getElementById('colorPalette').style.display = 'none';
-      document.getElementById('brushSliderContainer').style.display = 'none';
-      document.getElementById('screenshotBtn').style.display = 'none';
-      document.getElementById('closeBtn').style.display = 'none';
-      document.getElementById('hintTextOnPuzzle').style.display = 'none';
-      // Повертаємося до пошуку маркера
-      currentColoring = null;
-      currentMarkerId = null;
-      screens.show('hint');
-    };
+      document.getElementById('closeBtn').onclick = () => {
+        if (currentColoring) {
+          saveDrawing(currentMarkerId);
+        }
+        
+        // Ховаємо UI розмальовки
+        document.getElementById('coloringCanvas').style.display = 'none';
+        document.getElementById('colorPalette').style.display = 'none';
+        document.getElementById('brushSliderContainer').style.display = 'none';
+        document.getElementById('screenshotBtn').style.display = 'none';
+        document.getElementById('closeBtn').style.display = 'none';
+        document.getElementById('hintTextOnPuzzle').style.display = 'none';
+        
+        // Повертаємося до пошуку маркера
+        currentColoring = null;
+        currentMarkerId = null;
+        screens.show('hint');
+      };
+    }
 
     const screens = {
       show(name) {
@@ -454,71 +714,112 @@
       if (started) return;
       started = true;
       screens.show('loading');
+      
       try {
-        await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
+        });
+        
         arSystem = document.querySelector('a-scene').systems['mindar-image-system'];
-        arSystem.start();
-        screens.show('hint');
-        playMusic();
+        if (arSystem) {
+          arSystem.start();
+          screens.show('hint');
+          playMusic();
+        } else {
+          throw new Error('AR system not found');
+        }
       } catch (e) {
+        console.error('Camera error:', e);
         alert(isUA ? "Дозволь доступ до камери!" : "Allow camera access!");
         started = false;
         screens.show('start');
       }
     };
 
+    // Ініціалізація при завантаженні сторінки
     document.querySelector('a-scene').addEventListener('loaded', () => {
       console.log('✅ AR готовий');
-
+      
+      initUI();
+      
       COLORING_PAGES.forEach(cfg => {
         const entity = document.createElement('a-entity');
         entity.setAttribute('mindar-image-target', `targetIndex: ${cfg.id}`);
         
         entity.addEventListener('targetFound', async () => {
-          if (currentColoring) return; // запобігаємо дублюванню
+          if (currentColoring) return;
 
           console.log('🎨 Активовано розмальовку:', cfg.id);
           currentMarkerId = cfg.id;
 
-          // Завантажуємо зображення
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          await new Promise((res, rej) => {
-            img.onload = res;
-            img.onerror = rej;
-            img.src = cfg.image + '?v=' + Date.now();
-          });
+          try {
+            // Завантажуємо зображення
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = cfg.image + '?v=' + Date.now();
+            });
 
-          // Ініціалізуємо
-          currentColoring = new ColoringApp('coloringCanvas');
-          currentColoring.setImage(img);
+            // Ініціалізуємо розмальовку
+            currentColoring = new ColoringApp('coloringCanvas');
+            currentColoring.setImage(img);
 
-          // Відновлюємо збережене
-          const saved = localStorage.getItem(`coloring-${cfg.id}`);
-          if (saved) {
-            const savedImg = new Image();
-            savedImg.onload = () => {
-              currentColoring.ctx.drawImage(savedImg, 0, 0, currentColoring.canvas.width, currentColoring.canvas.height);
-            };
-            savedImg.src = saved;
+            // Відновлюємо збережене
+            const saved = localStorage.getItem(`coloring-${cfg.id}`);
+            if (saved) {
+              const savedImg = new Image();
+              savedImg.onload = () => {
+                const dpr = Math.min(window.devicePixelRatio || 1, 2);
+                currentColoring.ctx.drawImage(
+                  savedImg, 
+                  0, 0, 
+                  currentColoring.canvas.width / dpr, 
+                  currentColoring.canvas.height / dpr
+                );
+              };
+              savedImg.src = saved;
+            }
+
+            // Показуємо UI
+            document.getElementById('coloringCanvas').style.display = 'block';
+            document.getElementById('colorPalette').style.display = 'flex';
+            document.getElementById('brushSliderContainer').style.display = 'block';
+            document.getElementById('screenshotBtn').style.display = 'block';
+            document.getElementById('closeBtn').style.display = 'block';
+            document.getElementById('hintTextOnPuzzle').style.display = 'block';
+            
+            // Оновлюємо підказку
+            showMessage(isUA ? 
+              'Малюй пальчиком! Зберігай 📸' : 
+              'Draw with your finger! Save 📸'
+            );
+            
+          } catch (error) {
+            console.error('Помилка завантаження зображення:', error);
+            showMessage(isUA ? 
+              'Помилка завантаження зображення' : 
+              'Error loading image'
+            );
           }
-
-          // Показуємо UI
-          document.getElementById('coloringCanvas').style.display = 'block';
-          document.getElementById('colorPalette').style.display = 'flex';
-          document.getElementById('brushSliderContainer').style.display = 'block';
-          document.getElementById('screenshotBtn').style.display = 'block';
-          document.getElementById('closeBtn').style.display = 'block';
-          document.getElementById('hintTextOnPuzzle').style.display = 'block';
         });
 
-        // НЕ слухаємо targetLost — малювання не ховається!
-        
         document.querySelector('a-scene').appendChild(entity);
       });
       
       setLanguage(false);
       screens.show('start');
+    });
+
+    // Обробка помилок завантаження аудіо
+    music.addEventListener('error', (e) => {
+      console.log('Audio load error:', e);
+      document.getElementById('soundBtn').style.display = 'none';
     });
   </script>
 </body>
