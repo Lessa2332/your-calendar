@@ -8,7 +8,6 @@
 
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <style>
     *, *::before, *::after {
@@ -192,39 +191,6 @@
       display: none;
     }
     
-    .store-link {
-      background: #f16521;
-      color: white;
-      text-decoration: none;
-      padding: 12px 25px;
-      border-radius: 50px;
-      font-size: clamp(16px, 3.5vw, 18px);
-      margin: 8px;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      box-shadow: 0 0 20px #f16521;
-      transition: transform 0.3s;
-      font-family: 'Comic Sans MS', cursive, sans-serif;
-    }
-    
-    .store-link:hover {
-      transform: scale(1.05);
-    }
-    
-    .store-link::before {
-      content: "🛍️";
-      font-size: 18px;
-    }
-    
-    .store-text {
-      font-size: clamp(14px, 3.5vw, 16px);
-      margin: 10px 0;
-      opacity: 0.9;
-      text-align: center;
-      max-width: 90%;
-    }
-    
     /* Палітра — 32 кольори */
     #colorPalette {
       position: fixed;
@@ -363,11 +329,6 @@
         padding: 18px 35px;
         font-size: 20px;
       }
-      
-      .store-link {
-        padding: 15px 30px;
-        font-size: 18px;
-      }
     }
   </style>
 </head>
@@ -380,7 +341,7 @@
 
   <button id="langBtn">UA</button>
   <button id="soundBtn">🔈</button>
-  <a href="https://smartlessa.etsy.com" target="_blank" id="etsyBtn" style="display:none">Our Store</a>
+  <a href="https://smartlessa.etsy.com" target="_blank" id="etsyBtn">Our Store</a>
 
   <div id="colorPalette"></div>
   <div id="brushSliderContainer">
@@ -393,13 +354,6 @@
     <h1 data-en="Magic Coloring" data-ua="Магічна Розмальовка">Magic Coloring</h1>
     <p data-en="12 magical coloring pages for you" data-ua="12 чарівних розмальовок для тебе">12 magical coloring pages for you</p>
     <button id="startBtn" data-en="START THE MAGIC!" data-ua="ПОЧАТИ МАГІЮ!">START THE MAGIC!</button>
-    
-    <p class="store-text" data-en="Get your own magical calendar!" data-ua="Отримай свій чарівний календар!">
-      Get your own magical calendar!
-    </p>
-    <a href="https://smartlessa.etsy.com" target="_blank" class="store-link" data-en="Visit Our Etsy Store" data-ua="Наш магазин Etsy">
-      Visit Our Etsy Store
-    </a>
   </div>
 
   <div id="hintScreen" class="screen" style="display:none">
@@ -409,13 +363,6 @@
     <p data-en="Show it to the camera —<br>and a coloring page will appear!" data-ua="Покажи її камері —<br>і з'явиться розмальовка">
       Show it to the camera —<br>and a coloring page will appear!
     </p>
-    
-    <p class="store-text" data-en="Love this experience? Get the full calendar!" data-ua="Сподобалось? Отримай повний календар!">
-      Love this experience? Get the full calendar!
-    </p>
-    <a href="https://smartlessa.etsy.com" target="_blank" class="store-link" data-en="Get Yours Now" data-ua="Замовити зараз">
-      Get Yours Now
-    </a>
   </div>
 
   <audio id="bgMusic" loop preload="auto">
@@ -515,14 +462,20 @@
         const updateSize = () => {
           const w = window.innerWidth;
           const h = window.innerHeight;
-          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          const dpr = window.devicePixelRatio || 1;
+          
           this.canvas.width = w * dpr;
           this.canvas.height = h * dpr;
           this.canvas.style.width = w + 'px';
           this.canvas.style.height = h + 'px';
+          
           this.ctx.scale(dpr, dpr);
+          this.ctx.imageSmoothingEnabled = true;
+          this.ctx.imageSmoothingQuality = 'high';
+          
           this.redraw();
         };
+        
         updateSize();
         window.addEventListener('resize', updateSize);
       }
@@ -535,18 +488,30 @@
       redraw() {
         const w = window.innerWidth;
         const h = window.innerHeight;
+        
+        // Очищаємо canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
         if (this.image) {
           const imgAspect = this.image.width / this.image.height;
-          const maxW = w * 0.9;
-          const maxH = h * 0.85;
-          let drawW = maxW, drawH = maxW / imgAspect;
-          if (imgAspect < maxW / maxH) {
-            drawH = maxH;
-            drawW = maxH * imgAspect;
+          const screenAspect = w / h;
+          
+          let drawW, drawH, x, y;
+          
+          if (imgAspect > screenAspect) {
+            // Зображення ширше екрану
+            drawW = w * 0.9;
+            drawH = drawW / imgAspect;
+          } else {
+            // Зображення вище екрану
+            drawH = h * 0.85;
+            drawW = drawH * imgAspect;
           }
-          const x = (w - drawW) / 2;
-          const y = (h - drawH) / 2;
+          
+          x = (w - drawW) / 2;
+          y = (h - drawH) / 2;
+          
+          // Малюємо зображення
           this.ctx.drawImage(this.image, x, y, drawW, drawH);
         }
       }
@@ -572,13 +537,16 @@
           };
         };
 
-        const start = (e) => {
+        const startDrawing = (e) => {
           this.isDrawing = true;
           const coords = getCoords(e);
           this.lastX = coords.x;
           this.lastY = coords.y;
           
-          // Запобігаємо скролу на мобільних пристроях
+          // Починаємо новий шлях
+          this.ctx.beginPath();
+          this.ctx.moveTo(this.lastX, this.lastY);
+          
           if (e.type.includes('touch')) {
             e.preventDefault();
           }
@@ -591,38 +559,40 @@
           const currentX = coords.x;
           const currentY = coords.y;
           
-          this.ctx.beginPath();
-          this.ctx.moveTo(this.lastX, this.lastY);
-          this.ctx.lineTo(currentX, currentY);
-          this.ctx.strokeStyle = brushColor;
+          // Налаштування пензля
           this.ctx.lineWidth = brushSize;
           this.ctx.lineCap = 'round';
           this.ctx.lineJoin = 'round';
+          this.ctx.strokeStyle = brushColor;
+          
+          // Малюємо лінію
+          this.ctx.lineTo(currentX, currentY);
           this.ctx.stroke();
           
+          // Оновлюємо координати
           this.lastX = currentX;
           this.lastY = currentY;
           
-          // Запобігаємо скролу на мобільних пристроях
           if (e.type.includes('touch')) {
             e.preventDefault();
           }
         };
 
-        const stop = () => {
+        const stopDrawing = () => {
           this.isDrawing = false;
+          this.ctx.beginPath(); // Закриваємо поточний шлях
         };
 
         // Додаємо обробники подій
-        this.canvas.addEventListener('mousedown', start);
+        this.canvas.addEventListener('mousedown', startDrawing);
         this.canvas.addEventListener('mousemove', draw);
-        this.canvas.addEventListener('mouseup', stop);
-        this.canvas.addEventListener('mouseout', stop);
+        this.canvas.addEventListener('mouseup', stopDrawing);
+        this.canvas.addEventListener('mouseout', stopDrawing);
         
-        this.canvas.addEventListener('touchstart', start, { passive: false });
+        this.canvas.addEventListener('touchstart', startDrawing, { passive: false });
         this.canvas.addEventListener('touchmove', draw, { passive: false });
-        this.canvas.addEventListener('touchend', stop);
-        this.canvas.addEventListener('touchcancel', stop);
+        this.canvas.addEventListener('touchend', stopDrawing);
+        this.canvas.addEventListener('touchcancel', stopDrawing);
       }
     }
 
@@ -705,7 +675,6 @@
           const el = document.getElementById(s + 'Screen');
           if (el) el.style.display = (name === s) ? 'flex' : 'none';
         });
-        document.getElementById('etsyBtn').style.display = (name !== 'puzzle') ? 'flex' : 'none';
         document.getElementById('loadingIndicator').style.display = (name === 'loading') ? 'block' : 'none';
       }
     };
@@ -775,13 +744,7 @@
             if (saved) {
               const savedImg = new Image();
               savedImg.onload = () => {
-                const dpr = Math.min(window.devicePixelRatio || 1, 2);
-                currentColoring.ctx.drawImage(
-                  savedImg, 
-                  0, 0, 
-                  currentColoring.canvas.width / dpr, 
-                  currentColoring.canvas.height / dpr
-                );
+                currentColoring.ctx.drawImage(savedImg, 0, 0, currentColoring.canvas.width, currentColoring.canvas.height);
               };
               savedImg.src = saved;
             }
