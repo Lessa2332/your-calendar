@@ -14,16 +14,25 @@
       box-sizing: border-box;
     }
     
+    :root {
+      --vh: 1vh;
+    }
+    
     body, html {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
+      height: calc(var(--vh, 1vh) * 100);
       overflow: hidden;
       background: transparent !important;
       font-family: 'Comic Sans MS', cursive, sans-serif;
       touch-action: none;
       -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
     
     a-scene {
@@ -53,10 +62,10 @@
     
     #closeBtn {
       position: fixed;
-      top: max(15px, env(safe-area-inset-top, 15px));
-      right: 15px;
-      width: 45px;
-      height: 45px;
+      top: max(20px, env(safe-area-inset-top, 20px));
+      right: max(20px, env(safe-area-inset-right, 20px));
+      width: 44px;
+      height: 44px;
       background: #ff1493;
       color: white;
       border: none;
@@ -67,6 +76,7 @@
       box-shadow: 0 0 15px #ff1493;
       cursor: pointer;
       display: none;
+      -webkit-tap-highlight-color: transparent;
     }
     
     .screen {
@@ -100,6 +110,7 @@
       transition: transform 0.3s;
       min-height: 44px;
       font-family: 'Comic Sans MS', cursive, sans-serif;
+      -webkit-tap-highlight-color: transparent;
     }
     
     button:active {
@@ -126,25 +137,26 @@
     
     #langBtn {
       position: fixed;
-      top: max(15px, env(safe-area-inset-top, 15px));
-      left: 15px;
+      top: max(20px, env(safe-area-inset-top, 20px));
+      left: max(20px, env(safe-area-inset-left, 20px));
       background: #ff1493;
       color: white;
       border: none;
-      padding: 8px 12px;
+      padding: 12px 16px;
       border-radius: 25px;
       font-size: 14px;
       font-weight: bold;
       z-index: 1002;
       box-shadow: 0 0 12px #ff1493;
       cursor: pointer;
-      min-height: 36px;
+      min-height: 44px;
+      -webkit-tap-highlight-color: transparent;
     }
     
     #soundBtn {
       position: fixed;
-      bottom: max(15px, env(safe-area-inset-bottom, 15px));
-      right: 15px;
+      bottom: max(25px, env(safe-area-inset-bottom, 25px));
+      right: max(20px, env(safe-area-inset-right, 20px));
       background: rgba(255, 20, 147, 0.7);
       color: white;
       border: none;
@@ -154,14 +166,15 @@
       z-index: 1002;
       cursor: pointer;
       box-shadow: 0 0 12px #ff1493;
-      min-width: 40px;
-      min-height: 40px;
+      min-width: 44px;
+      min-height: 44px;
+      -webkit-tap-highlight-color: transparent;
     }
     
     #etsyBtn {
       position: fixed;
-      bottom: max(15px, env(safe-area-inset-bottom, 15px));
-      left: 15px;
+      bottom: max(25px, env(safe-area-inset-bottom, 25px));
+      left: max(20px, env(safe-area-inset-left, 20px));
       background: #f16521;
       color: white;
       border: none;
@@ -178,6 +191,7 @@
       align-items: center;
       gap: 4px;
       font-family: 'Comic Sans MS', cursive, sans-serif;
+      -webkit-tap-highlight-color: transparent;
     }
     
     #etsyBtn::before {
@@ -236,6 +250,7 @@
       cursor: pointer;
       flex-shrink: 0;
       transition: transform 0.2s;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .colorBtn:hover {
@@ -275,6 +290,7 @@
       background: #ddd;
       outline: none;
       -webkit-appearance: none;
+      font-size: 16px; /* Запобігає зумі на iOS */
     }
 
     #brushSlider::-webkit-slider-thumb {
@@ -301,18 +317,24 @@
     /* Кнопки дій */
     .action-buttons {
       position: fixed;
-      bottom: 12px;
+      bottom: max(25px, env(safe-area-inset-bottom, 25px));
       left: 50%;
       transform: translateX(-50%);
       display: none;
       z-index: 1003;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
     }
     
+    @supports (padding: max(0px)) {
+      .action-buttons {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    }
+    
     .action-btn {
-      width: 42px;
-      height: 42px;
+      width: 44px;
+      height: 44px;
       border: none;
       border-radius: 50%;
       font-size: 18px;
@@ -321,6 +343,7 @@
       align-items: center;
       justify-content: center;
       transition: transform 0.2s;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .action-btn:hover {
@@ -350,10 +373,10 @@
       box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
     }
 
-    #eraserBtn {
-      background: rgba(255, 255, 255, 0.9);
-      color: #333;
-      box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+    #zoomInBtn, #zoomOutBtn {
+      background: rgba(70, 130, 180, 0.9);
+      color: white;
+      box-shadow: 0 0 12px rgba(70, 130, 180, 0.8);
     }
     
     /* Індикатор вибраного кольору */
@@ -371,8 +394,8 @@
       display: none;
     }
 
-    /* Індикатор режиму */
-    #modeIndicator {
+    /* Індикатор масштабу */
+    #zoomIndicator {
       position: fixed;
       bottom: 145px;
       left: calc(50% + 25px);
@@ -477,12 +500,12 @@
       }
 
       .action-btn {
-        width: 38px;
-        height: 38px;
+        width: 40px;
+        height: 40px;
         font-size: 16px;
       }
 
-      #modeIndicator {
+      #zoomIndicator {
         bottom: 125px;
         font-size: 9px;
       }
@@ -490,21 +513,97 @@
 
     /* Для горизонтальної орієнтації */
     @media (max-height: 500px) and (orientation: landscape) {
+      #coloringCanvas {
+        max-width: min(70vw, 500px);
+        max-height: min(85vh, 400px);
+      }
+      
       #colorPalette {
         bottom: 60px;
+        padding: 6px 10px;
+      }
+      
+      .colorBtn {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
       }
       
       #brushSliderContainer {
-        bottom: 40px;
+        bottom: 35px;
       }
       
       .action-buttons {
-        bottom: 8px;
+        bottom: 15px;
       }
-
+      
       #currentColorIndicator {
         bottom: 100px;
       }
+    }
+
+    /* Покращення для планшетів */
+    @media (min-width: 768px) and (min-height: 1024px) {
+      #coloringCanvas {
+        max-width: min(80vw, 600px);
+        max-height: min(75vh, 800px);
+      }
+      
+      .colorBtn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+      }
+      
+      #colorPalette {
+        bottom: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: auto;
+        max-width: 90%;
+      }
+      
+      .action-buttons {
+        gap: 20px;
+      }
+      
+      .action-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
+      }
+    }
+
+    /* Великі екрани (iPhone Pro Max, планшети) */
+    @media (min-width: 428px) and (min-height: 926px) {
+      #coloringCanvas {
+        max-width: min(85vw, 550px);
+        max-height: min(75vh, 750px);
+      }
+    }
+
+    /* Фікс для старих Android */
+    @media (max-width: 360px) and (max-height: 640px) {
+      .colorBtn {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+      }
+      
+      .action-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+      }
+      
+      #brushSliderContainer {
+        width: 90%;
+      }
+    }
+
+    /* Запобігання виділенню тексту на iOS */
+    input, button, textarea {
+        font-size: 16px;
     }
   </style>
 </head>
@@ -523,7 +622,7 @@
   <a href="https://smartlessa.etsy.com" target="_blank" id="etsyBtn">Our Store</a>
 
   <div id="currentColorIndicator"></div>
-  <div id="modeIndicator"></div>
+  <div id="zoomIndicator">100%</div>
   <div id="colorPalette">
     <div class="color-scroll-container" id="colorScrollContainer"></div>
   </div>
@@ -534,8 +633,9 @@
   
   <div class="action-buttons">
     <button id="undoBtn" title="Undo">↶</button>
-    <button id="eraserBtn" title="Eraser">🧽</button>
+    <button id="zoomOutBtn" title="Zoom Out">➖</button>
     <button id="screenshotBtn" title="Save">📷</button>
+    <button id="zoomInBtn" title="Zoom In">➕</button>
     <button id="clearBtn" title="Clear All">🗑️</button>
   </div>
 
@@ -595,12 +695,44 @@
     let brushColor = COLORS[0];
     let brushSize = 8;
     let discoveredMarkers = new Set();
-    let isEraserMode = false;
-    let originalBrushColor = COLORS[0];
+    let currentZoom = 1.0;
+    let isDragging = false;
+    let lastX = 0;
+    let lastY = 0;
+    let offsetX = 0;
+    let offsetY = 0;
 
     const music = document.getElementById('bgMusic');
     music.volume = 0.3;
     let soundOn = false;
+
+    // Фікс для iOS Safari viewport height
+    function setVH() {
+        let vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+    }
+
+    window.addEventListener('resize', setVH);
+    window.addEventListener('orientationchange', setVH);
+    setVH();
+
+    // Запобігання скролу на iOS
+    document.addEventListener('touchmove', function(e) {
+        if (e.target === document.getElementById('coloringCanvas') || isDragging) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    // Фікс для Android back button
+    if (window.history && window.history.pushState) {
+        window.history.pushState('forward', null, './');
+        window.addEventListener('popstate', function(ev) {
+            if (currentColoring) {
+                document.getElementById('closeBtn').click();
+                window.history.pushState('forward', null, './');
+            }
+        });
+    }
 
     // Функція для відладки
     function debugLog(message) {
@@ -659,45 +791,54 @@
       document.getElementById('undoBtn').title = ua ? 'Назад' : 'Undo';
       document.getElementById('screenshotBtn').title = ua ? 'Зберегти' : 'Save';
       document.getElementById('clearBtn').title = ua ? 'Очистити все' : 'Clear All';
-      document.getElementById('eraserBtn').title = ua ? 'Гумка' : 'Eraser';
+      document.getElementById('zoomInBtn').title = ua ? 'Збільшити' : 'Zoom In';
+      document.getElementById('zoomOutBtn').title = ua ? 'Зменшити' : 'Zoom Out';
       
-      // Оновлюємо індикатор режиму
-      updateModeIndicator();
+      updateZoomIndicator();
     }
 
-    function updateModeIndicator() {
-      const modeIndicator = document.getElementById('modeIndicator');
-      if (isEraserMode) {
-        modeIndicator.textContent = isUA ? 'Гумка' : 'Eraser';
-        modeIndicator.style.display = 'block';
-      } else {
-        modeIndicator.style.display = 'none';
+    function updateZoomIndicator() {
+      document.getElementById('zoomIndicator').textContent = Math.round(currentZoom * 100) + '%';
+      document.getElementById('zoomIndicator').style.display = 'block';
+    }
+
+    function zoomIn() {
+      if (currentZoom < 3.0) {
+        currentZoom = Math.min(currentZoom + 0.25, 3.0);
+        applyZoom();
+        debugLog('Збільшено масштаб: ' + currentZoom);
       }
     }
 
-    function toggleEraser() {
-      isEraserMode = !isEraserMode;
-      
-      if (isEraserMode) {
-        // Зберігаємо оригінальний колір та встановлюємо гумку
-        originalBrushColor = brushColor;
-        brushColor = '#FFFFFF'; // Білий колір для гумки
-        document.getElementById('eraserBtn').classList.add('active');
-        debugLog('Режим гумки увімкнено');
-      } else {
-        // Відновлюємо оригінальний колір
-        brushColor = originalBrushColor;
-        document.getElementById('eraserBtn').classList.remove('active');
-        debugLog('Режим гумки вимкнено');
+    function zoomOut() {
+      if (currentZoom > 0.5) {
+        currentZoom = Math.max(currentZoom - 0.25, 0.5);
+        applyZoom();
+        debugLog('Зменшено масштаб: ' + currentZoom);
       }
+    }
+
+    function applyZoom() {
+      if (!currentColoring) return;
       
-      updateModeIndicator();
-      updateColorButtons();
+      const canvas = document.getElementById('coloringCanvas');
+      const originalWidth = currentColoring.originalWidth;
+      const originalHeight = currentColoring.originalHeight;
+      
+      if (originalWidth && originalHeight) {
+        const newWidth = originalWidth * currentZoom;
+        const newHeight = originalHeight * currentZoom;
+        
+        canvas.style.width = newWidth + 'px';
+        canvas.style.height = newHeight + 'px';
+        
+        updateZoomIndicator();
+      }
     }
 
     function updateColorButtons() {
       document.querySelectorAll('.colorBtn').forEach((btn, index) => {
-        if (brushColor === COLORS[index] && !isEraserMode) {
+        if (brushColor === COLORS[index]) {
           btn.classList.add('active');
         } else {
           btn.classList.remove('active');
@@ -720,13 +861,12 @@
       document.getElementById('closeBtn').style.display = 'none';
       document.getElementById('hintTextOnPuzzle').style.display = 'none';
       document.getElementById('currentColorIndicator').style.display = 'none';
-      document.getElementById('modeIndicator').style.display = 'none';
+      document.getElementById('zoomIndicator').style.display = 'none';
       document.getElementById('imageLoading').style.display = 'none';
       debugLog('UI розмальовки приховано');
     }
 
     function showColoringUI() {
-      // КРИТИЧНО: ховаємо екран підказки перед показом UI розмальовки
       document.getElementById('hintScreen').style.display = 'none';
       
       document.getElementById('coloringCanvas').style.display = 'block';
@@ -737,7 +877,7 @@
       document.getElementById('hintTextOnPuzzle').style.display = 'block';
       document.getElementById('currentColorIndicator').style.display = 'block';
       
-      updateModeIndicator();
+      updateZoomIndicator();
       updateColorButtons();
       
       debugLog('UI розмальовки показано');
@@ -753,6 +893,8 @@
         this.lastY = 0;
         this.imageWidth = 0;
         this.imageHeight = 0;
+        this.originalWidth = 0;
+        this.originalHeight = 0;
         
         // Історія для Undo
         this.history = [];
@@ -764,20 +906,17 @@
       }
 
       setupCanvas() {
-        // Спочатку невеликі розміри
         this.canvas.width = 400;
         this.canvas.height = 500;
         this.canvas.style.width = '400px';
         this.canvas.style.height = '500px';
         
-        // Налаштовуємо контекст для малювання
         this.ctx.imageSmoothingEnabled = true;
         this.ctx.imageSmoothingQuality = 'high';
         this.ctx.globalCompositeOperation = 'source-over';
         this.ctx.lineCap = 'round';
         this.ctx.lineJoin = 'round';
         
-        // Очищаємо canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         debugLog('Canvas налаштовано');
       }
@@ -792,12 +931,13 @@
         let width = img.width;
         let height = img.height;
         
-        // Масштабуємо зображення
         const scale = Math.min(maxWidth / width, maxHeight / height);
         width = width * scale;
         height = height * scale;
         
-        // Оновлюємо розміри canvas
+        this.originalWidth = width;
+        this.originalHeight = height;
+        
         this.canvas.width = width;
         this.canvas.height = height;
         this.canvas.style.width = width + 'px';
@@ -813,15 +953,11 @@
       redraw() {
         if (!this.image) return;
         
-        // Очищаємо canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Малюємо оригінальне зображення
         this.ctx.drawImage(this.image, 0, 0, this.imageWidth, this.imageHeight);
         debugLog('Зображення перемальовано');
       }
 
-      // Зберегти поточний стан в історію
       saveState() {
         if (this.history.length >= this.maxHistorySize) {
           this.history.shift();
@@ -831,7 +967,6 @@
         debugLog('Стан збережено. Історія: ' + this.history.length);
       }
 
-      // Відновити попередній стан (Undo)
       undo() {
         if (this.history.length > 0) {
           this.history.pop();
@@ -857,7 +992,6 @@
         }
       }
 
-      // Очистити весь малюнок
       clear() {
         if (confirm(isUA ? 'Очистити весь малюнок?' : 'Clear all drawing?')) {
           this.history = [];
@@ -880,23 +1014,24 @@
             clientY = e.clientY;
           }
           
-          const x = clientX - rect.left;
-          const y = clientY - rect.top;
+          const x = (clientX - rect.left) / currentZoom;
+          const y = (clientY - rect.top) / currentZoom;
           
           return { x, y };
         };
 
         const startDrawing = (e) => {
+          // Перевіряємо чи це не жест перетягування
+          if (e.touches && e.touches.length > 1) return;
+          
           debugLog('Початок малювання');
           this.isDrawing = true;
           const coords = getCoords(e);
           this.lastX = coords.x;
           this.lastY = coords.y;
           
-          // Зберігаємо стан перед початком малювання
           this.saveState();
           
-          // Починаємо новий шлях
           this.ctx.beginPath();
           this.ctx.moveTo(this.lastX, this.lastY);
           
@@ -907,17 +1042,16 @@
 
         const draw = (e) => {
           if (!this.isDrawing) return;
+          if (e.touches && e.touches.length > 1) return;
           
           const coords = getCoords(e);
           const currentX = coords.x;
           const currentY = coords.y;
           
-          // Налаштовуємо пензель
-          this.ctx.lineWidth = brushSize;
+          this.ctx.lineWidth = brushSize / currentZoom;
           this.ctx.strokeStyle = brushColor;
-          this.ctx.globalCompositeOperation = isEraserMode ? 'destination-out' : 'source-over';
+          this.ctx.globalCompositeOperation = 'source-over';
           
-          // Малюємо лінію
           this.ctx.lineTo(currentX, currentY);
           this.ctx.stroke();
           
@@ -933,8 +1067,6 @@
           debugLog('Кінець малювання');
           this.isDrawing = false;
           this.ctx.beginPath();
-          // Повертаємо нормальний режим малювання
-          this.ctx.globalCompositeOperation = 'source-over';
         };
 
         // Додаємо обробники подій
@@ -961,9 +1093,6 @@
         btn.className = 'colorBtn';
         btn.style.background = c;
         btn.onclick = () => { 
-          if (isEraserMode) {
-            toggleEraser(); // Вимикаємо гумку при виборі кольору
-          }
           brushColor = c;
           document.getElementById('currentColorIndicator').style.background = c;
           updateColorButtons();
@@ -1020,8 +1149,9 @@
         }
       };
 
-      // Кнопка Eraser
-      document.getElementById('eraserBtn').onclick = toggleEraser;
+      // Кнопки масштабування
+      document.getElementById('zoomInBtn').onclick = zoomIn;
+      document.getElementById('zoomOutBtn').onclick = zoomOut;
 
       document.getElementById('closeBtn').onclick = () => {
         debugLog('Закриття розмальовки');
@@ -1032,11 +1162,7 @@
         hideColoringUI();
         currentColoring = null;
         currentMarkerId = null;
-        // Вимикаємо гумку при закритті
-        if (isEraserMode) {
-          toggleEraser();
-        }
-        // Показуємо екран підказки при закритті
+        currentZoom = 1.0; // Скидаємо масштаб
         document.getElementById('hintScreen').style.display = 'flex';
       };
     }
@@ -1134,7 +1260,6 @@
               savedImg.src = saved;
             }
 
-            // КРИТИЧНО: показуємо UI розмальовки та ховаємо екран підказки
             showColoringUI();
             
             showMessage(isUA ? 
@@ -1162,11 +1287,7 @@
             hideColoringUI();
             currentColoring = null;
             currentMarkerId = null;
-            // Вимикаємо гумку при втраті маркера
-            if (isEraserMode) {
-              toggleEraser();
-            }
-            // Показуємо екран підказки при втраті маркера
+            currentZoom = 1.0; // Скидаємо масштаб
             document.getElementById('hintScreen').style.display = 'flex';
           }
         });
