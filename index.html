@@ -191,73 +191,96 @@
       display: none;
     }
     
-    /* Палітра — 32 кольори */
+    /* Компактна палітра кольорів з повзунком */
     #colorPalette {
       position: fixed;
-      bottom: 140px;
-      left: 50%;
-      transform: translateX(-50%);
+      bottom: 100px;
+      left: 10px;
+      right: 10px;
       display: none;
       z-index: 1002;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 25px;
+      padding: 12px;
+      overflow-x: auto;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .color-scroll-container {
       display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 6px;
-      max-width: 95%;
-      padding: 8px;
-      background: rgba(0, 0, 0, 0.5);
-      border-radius: 20px;
+      gap: 8px;
+      min-width: min-content;
     }
     
     .colorBtn {
-      width: clamp(30px, 8vw, 40px);
-      height: clamp(30px, 8vw, 40px);
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
       border-radius: 50%;
       border: 2px solid white;
       box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
       cursor: pointer;
+      flex-shrink: 0;
     }
     
-    /* Слайдер товщини пензля */
+    /* Слайдер товщини пензля - компактний */
     #brushSliderContainer {
       position: fixed;
-      bottom: 90px;
+      bottom: 60px;
       left: 50%;
       transform: translateX(-50%);
       width: 80%;
-      max-width: 350px;
+      max-width: 300px;
       display: none;
       z-index: 1002;
-      background: rgba(0, 0, 0, 0.5);
-      padding: 8px 12px;
-      border-radius: 15px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 8px 15px;
+      border-radius: 20px;
       text-align: center;
       color: white;
       font-weight: bold;
-      font-size: clamp(14px, 3.5vw, 16px);
+      font-size: clamp(12px, 3vw, 14px);
     }
     
     #brushSlider {
       width: 100%;
       margin-top: 5px;
+      height: 6px;
+      border-radius: 3px;
     }
     
     /* Кнопка скріншота */
     #screenshotBtn {
       position: fixed;
-      bottom: 20px;
+      bottom: 15px;
       left: 50%;
       transform: translateX(-50%);
       width: 50px;
       height: 50px;
-      background: rgba(34, 139, 34, 0.8);
+      background: rgba(34, 139, 34, 0.9);
       color: white;
       border: none;
       border-radius: 50%;
       font-size: 20px;
       z-index: 1003;
-      box-shadow: 0 0 15px rgba(34, 139, 34, 0.6);
+      box-shadow: 0 0 15px rgba(34, 139, 34, 0.8);
       cursor: pointer;
+      display: none;
+    }
+    
+    /* Індикатор вибраного кольору */
+    #currentColorIndicator {
+      position: fixed;
+      bottom: 165px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      z-index: 1002;
       display: none;
     }
     
@@ -280,20 +303,27 @@
       max-width: 90%;
     }
     
-    /* Адаптація для дуже маленьких екранів */
+    /* Адаптація для маленьких екранів */
     @media (max-height: 600px) {
       #colorPalette {
-        bottom: 120px;
-        gap: 4px;
-      }
-      
-      #brushSliderContainer {
         bottom: 80px;
+        padding: 8px;
       }
       
       .colorBtn {
-        width: 28px;
-        height: 28px;
+        width: 35px;
+        height: 35px;
+        min-width: 35px;
+      }
+      
+      #brushSliderContainer {
+        bottom: 50px;
+      }
+      
+      #currentColorIndicator {
+        bottom: 140px;
+        width: 25px;
+        height: 25px;
       }
     }
     
@@ -306,29 +336,54 @@
       }
       
       #colorPalette {
-        bottom: 100px;
+        bottom: 60px;
       }
       
       #brushSliderContainer {
-        bottom: 60px;
+        bottom: 40px;
       }
       
       #screenshotBtn {
         bottom: 10px;
+      }
+      
+      #currentColorIndicator {
+        bottom: 110px;
       }
     }
     
     /* Покращення для планшетів */
     @media (min-width: 768px) {
       .colorBtn {
-        width: 44px;
-        height: 44px;
+        width: 45px;
+        height: 45px;
+        min-width: 45px;
       }
       
-      button {
-        padding: 18px 35px;
-        font-size: 20px;
+      #colorPalette {
+        left: 20px;
+        right: 20px;
+        bottom: 110px;
       }
+    }
+    
+    /* Стилізація скроллбару для палітри */
+    #colorPalette::-webkit-scrollbar {
+      height: 6px;
+    }
+    
+    #colorPalette::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+    
+    #colorPalette::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+    }
+    
+    #colorPalette::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
     }
   </style>
 </head>
@@ -343,7 +398,10 @@
   <button id="soundBtn">🔈</button>
   <a href="https://smartlessa.etsy.com" target="_blank" id="etsyBtn">Our Store</a>
 
-  <div id="colorPalette"></div>
+  <div id="currentColorIndicator"></div>
+  <div id="colorPalette">
+    <div class="color-scroll-container" id="colorScrollContainer"></div>
+  </div>
   <div id="brushSliderContainer">
     <div data-en="Brush Size" data-ua="Товщина пензля">Brush Size</div>
     <input type="range" id="brushSlider" min="2" max="50" value="12">
@@ -360,8 +418,8 @@
     <h2 data-en="Find any picture from the calendar!" data-ua="Знайди будь-яку картинку з календаря!">
       Find any picture from the calendar!
     </h2>
-    <p data-en="Show it to the camera —<br>and a coloring page will appear!" data-ua="Покажи її камері —<br>і з'явиться розмальовка">
-      Show it to the camera —<br>and a coloring page will appear!
+    <p data-en="Show it to the camera — and a coloring page will appear!" data-ua="Покажи її камері — і з'явиться розмальовка">
+      Show it to the camera — and a coloring page will appear!
     </p>
   </div>
 
@@ -598,28 +656,23 @@
 
     // Ініціалізація UI
     function initUI() {
-      const palette = document.getElementById('colorPalette');
-      palette.innerHTML = '';
+      const colorContainer = document.getElementById('colorScrollContainer');
+      colorContainer.innerHTML = '';
       
       COLORS.forEach(c => {
         const btn = document.createElement('button');
         btn.className = 'colorBtn';
         btn.style.background = c;
         btn.onclick = () => { 
-          brushColor = c; 
-          // Додаємо візуальний індикатор вибраного кольору
-          document.querySelectorAll('.colorBtn').forEach(b => {
-            b.style.boxShadow = '0 0 5px rgba(0, 0, 0, 0.3)';
-          });
-          btn.style.boxShadow = '0 0 0 3px white, 0 0 10px ' + c;
+          brushColor = c;
+          // Оновлюємо індикатор поточного кольору
+          document.getElementById('currentColorIndicator').style.background = c;
         };
-        palette.appendChild(btn);
+        colorContainer.appendChild(btn);
       });
       
-      // Вибираємо перший колір за замовчуванням
-      if (palette.firstChild) {
-        palette.firstChild.style.boxShadow = '0 0 0 3px white, 0 0 10px ' + COLORS[0];
-      }
+      // Ініціалізуємо індикатор кольору
+      document.getElementById('currentColorIndicator').style.background = brushColor;
 
       document.getElementById('brushSlider').oninput = (e) => {
         brushSize = parseInt(e.target.value);
@@ -661,6 +714,7 @@
         document.getElementById('screenshotBtn').style.display = 'none';
         document.getElementById('closeBtn').style.display = 'none';
         document.getElementById('hintTextOnPuzzle').style.display = 'none';
+        document.getElementById('currentColorIndicator').style.display = 'none';
         
         // Повертаємося до пошуку маркера
         currentColoring = null;
@@ -751,11 +805,12 @@
 
             // Показуємо UI
             document.getElementById('coloringCanvas').style.display = 'block';
-            document.getElementById('colorPalette').style.display = 'flex';
+            document.getElementById('colorPalette').style.display = 'block';
             document.getElementById('brushSliderContainer').style.display = 'block';
             document.getElementById('screenshotBtn').style.display = 'block';
             document.getElementById('closeBtn').style.display = 'block';
             document.getElementById('hintTextOnPuzzle').style.display = 'block';
+            document.getElementById('currentColorIndicator').style.display = 'block';
             
             // Оновлюємо підказку
             showMessage(isUA ? 
