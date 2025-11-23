@@ -36,11 +36,16 @@
     
     #coloringCanvas {
       position: fixed;
-      inset: 0;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       z-index: 100;
       background: transparent;
       pointer-events: auto;
       display: none;
+      border: 2px solid #ff1493;
+      border-radius: 15px;
+      box-shadow: 0 0 30px rgba(255, 20, 147, 0.5);
     }
     
     #closeBtn {
@@ -302,6 +307,21 @@
       line-height: 1.4;
       max-width: 90%;
     }
+
+    /* Додаємо індикатор завантаження зображення */
+    #imageLoading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 18px;
+      z-index: 1004;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px 25px;
+      border-radius: 15px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -310,6 +330,7 @@
   <button id="closeBtn">✕</button>
   <div id="hintTextOnPuzzle"></div>
   <div id="loadingIndicator">Loading...</div>
+  <div id="imageLoading">Loading image...</div>
 
   <button id="langBtn">UA</button>
   <button id="soundBtn">🔈</button>
@@ -429,71 +450,77 @@
         this.isDrawing = false;
         this.lastX = 0;
         this.lastY = 0;
+        this.imageWidth = 0;
+        this.imageHeight = 0;
+        this.imageX = 0;
+        this.imageY = 0;
         this.setupCanvas();
         this.setupEvents();
       }
 
       setupCanvas() {
-        const updateSize = () => {
-          const w = window.innerWidth;
-          const h = window.innerHeight;
-          const dpr = window.devicePixelRatio || 1;
-          
-          this.canvas.width = w * dpr;
-          this.canvas.height = h * dpr;
-          this.canvas.style.width = w + 'px';
-          this.canvas.style.height = h + 'px';
-          
-          this.ctx.scale(dpr, dpr);
-          this.ctx.imageSmoothingEnabled = true;
-          this.ctx.imageSmoothingQuality = 'high';
-          
-          // ВАЖЛИВО: Встановлюємо прозорий фон для canvas
-          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-          this.ctx.fillStyle = 'transparent';
-          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-          
-          this.redraw();
-        };
+        // Спочатку встановлюємо невеликі розміри, потім оновимо при завантаженні зображення
+        this.canvas.width = 300;
+        this.canvas.height = 400;
+        this.canvas.style.width = '300px';
+        this.canvas.style.height = '400px';
         
-        updateSize();
-        window.addEventListener('resize', updateSize);
+        // Налаштовуємо контекст
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
+        this.ctx.globalCompositeOperation = 'source-over';
+        
+        // Очищаємо canvas
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.fillStyle = 'transparent';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
       }
 
       setImage(img) {
         this.image = img;
+        
+        // Розраховуємо розміри для відображення
+        const maxWidth = window.innerWidth * 0.8;
+        const maxHeight = window.innerHeight * 0.7;
+        
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > maxWidth) {
+          height = (maxWidth / width) * height;
+          width = maxWidth;
+        }
+        
+        if (height > maxHeight) {
+          width = (maxHeight / height) * width;
+          height = maxHeight;
+        }
+        
+        // Оновлюємо розміри canvas
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+        
+        this.imageWidth = width;
+        this.imageHeight = height;
+        
+        // Центруємо canvas
+        this.canvas.style.left = '50%';
+        this.canvas.style.top = '50%';
+        this.canvas.style.transform = 'translate(-50%, -50%)';
+        
         this.redraw();
       }
 
       redraw() {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
+        if (!this.image) return;
         
         // Очищаємо canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
-        if (this.image) {
-          const imgAspect = this.image.width / this.image.height;
-          const screenAspect = w / h;
-          
-          let drawW, drawH, x, y;
-          
-          if (imgAspect > screenAspect) {
-            // Зображення ширше екрану
-            drawW = w * 0.9;
-            drawH = drawW / imgAspect;
-          } else {
-            // Зображення вище екрану
-            drawH = h * 0.85;
-            drawW = drawH * imgAspect;
-          }
-          
-          x = (w - drawW) / 2;
-          y = (h - drawH) / 2;
-          
-          // Малюємо оригінальне чорно-біле зображення
-          this.ctx.drawImage(this.image, x, y, drawW, drawH);
-        }
+        // Малюємо оригінальне чорно-біле зображення
+        this.ctx.drawImage(this.image, 0, 0, this.imageWidth, this.imageHeight);
       }
 
       setupEvents() {
@@ -511,13 +538,14 @@
             clientY = e.clientY;
           }
           
-          return {
-            x: (clientX - rect.left) * scaleX,
-            y: (clientY - rect.top) * scaleY
-          };
+          const x = (clientX - rect.left) * scaleX;
+          const y = (clientY - rect.top) * scaleY;
+          
+          return { x, y };
         };
 
         const startDrawing = (e) => {
+          console.log('Start drawing');
           this.isDrawing = true;
           const coords = getCoords(e);
           this.lastX = coords.x;
@@ -544,7 +572,9 @@
           this.ctx.lineCap = 'round';
           this.ctx.lineJoin = 'round';
           this.ctx.strokeStyle = brushColor;
-          this.ctx.globalCompositeOperation = 'source-over'; // Малюємо поверх зображення
+          this.ctx.globalCompositeOperation = 'source-over';
+          
+          console.log('Drawing at:', currentX, currentY, 'color:', brushColor);
           
           // Малюємо лінію
           this.ctx.lineTo(currentX, currentY);
@@ -560,8 +590,9 @@
         };
 
         const stopDrawing = () => {
+          console.log('Stop drawing');
           this.isDrawing = false;
-          this.ctx.beginPath(); // Закриваємо поточний шлях
+          this.ctx.beginPath();
         };
 
         // Додаємо обробники подій
@@ -588,13 +619,11 @@
         btn.style.background = c;
         btn.onclick = () => { 
           brushColor = c;
-          // Оновлюємо індикатор поточного кольору
           document.getElementById('currentColorIndicator').style.background = c;
         };
         colorContainer.appendChild(btn);
       });
       
-      // Ініціалізуємо індикатор кольору
       document.getElementById('currentColorIndicator').style.background = brushColor;
 
       document.getElementById('brushSlider').oninput = (e) => {
@@ -617,18 +646,9 @@
       document.getElementById('screenshotBtn').onclick = () => {
         if (!currentColoring) return;
         
-        // ВАЖЛИВО: Створюємо новий canvas для експорту
-        const exportCanvas = document.createElement('canvas');
-        exportCanvas.width = currentColoring.canvas.width;
-        exportCanvas.height = currentColoring.canvas.height;
-        const exportCtx = exportCanvas.getContext('2d');
-        
-        // Копіюємо вміст оригінального canvas
-        exportCtx.drawImage(currentColoring.canvas, 0, 0);
-        
         const link = document.createElement('a');
         link.download = `magic-coloring-${currentMarkerId + 1}.png`;
-        link.href = exportCanvas.toDataURL('image/png');
+        link.href = currentColoring.canvas.toDataURL('image/png');
         link.click();
         
         showMessage(isUA ? '📸 Знімок збережено!' : '📸 Screenshot saved!');
@@ -640,7 +660,6 @@
           saveDrawing(currentMarkerId);
         }
         
-        // Ховаємо UI розмальовки
         document.getElementById('coloringCanvas').style.display = 'none';
         document.getElementById('colorPalette').style.display = 'none';
         document.getElementById('brushSliderContainer').style.display = 'none';
@@ -649,7 +668,6 @@
         document.getElementById('hintTextOnPuzzle').style.display = 'none';
         document.getElementById('currentColorIndicator').style.display = 'none';
         
-        // Повертаємося до пошуку маркера
         currentColoring = null;
         currentMarkerId = null;
         screens.show('hint');
@@ -713,14 +731,21 @@
           currentMarkerId = cfg.id;
 
           try {
+            // Показуємо індикатор завантаження
+            document.getElementById('imageLoading').style.display = 'block';
+
             // Завантажуємо зображення
             const img = new Image();
             img.crossOrigin = "anonymous";
+            
             await new Promise((resolve, reject) => {
               img.onload = resolve;
               img.onerror = reject;
               img.src = cfg.image + '?v=' + Date.now();
             });
+
+            // Ховаємо індикатор завантаження
+            document.getElementById('imageLoading').style.display = 'none';
 
             // Ініціалізуємо розмальовку
             currentColoring = new ColoringApp('coloringCanvas');
@@ -731,7 +756,6 @@
             if (saved) {
               const savedImg = new Image();
               savedImg.onload = () => {
-                // Малюємо збережене поверх оригінального зображення
                 currentColoring.ctx.drawImage(savedImg, 0, 0);
               };
               savedImg.src = saved;
@@ -746,7 +770,6 @@
             document.getElementById('hintTextOnPuzzle').style.display = 'block';
             document.getElementById('currentColorIndicator').style.display = 'block';
             
-            // Оновлюємо підказку
             showMessage(isUA ? 
               'Малюй пальчиком! Зберігай 📸' : 
               'Draw with your finger! Save 📸'
@@ -754,6 +777,7 @@
             
           } catch (error) {
             console.error('Помилка завантаження зображення:', error);
+            document.getElementById('imageLoading').style.display = 'none';
             showMessage(isUA ? 
               'Помилка завантаження зображення' : 
               'Error loading image'
@@ -768,7 +792,6 @@
       screens.show('start');
     });
 
-    // Обробка помилок завантаження аудіо
     music.addEventListener('error', (e) => {
       console.log('Audio load error:', e);
       document.getElementById('soundBtn').style.display = 'none';
@@ -776,4 +799,3 @@
   </script>
 </body>
 </html>
-
